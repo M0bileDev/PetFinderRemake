@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="content_description_animal_image">Animal image</string>
+    <string name="content_description_animal_icon_type">Animal icon type</string>
+    <string name="breed_unknown">Unknown</string>
+    <string name="breed_mixed">Mixed</string>
+    <string name="load_more">Load more</string>
+    <string name="pagination_animal_current_size_of_total_count">Animals %1$d of %2$d</string>
+    <string name="loading_data">Loading data</string>
+    <string name="retry_loading_data_standard_text">An error occurred during loading data. Try again.</string>
+    <string name="retry">Retry</string>
+
+    <string name="network_error">Network error</string>
+    <string name="network_error_access_denied_invalid_credentials">Access was denied due to invalid credentials.</string>
+    <string name="network_error_access_denied_insufficient_access">Access denied due to insufficient access.</string>
+    <string name="network_error_not_found">The requested resource was not found.</string>
+    <string name="network_error_unexpected_error">The request ran into an unexpected error.</string>
+    <string name="network_error_missing_parameters">The request has missing parameters.</string>
+    <string name="network_error_invalid_parameters">Your request contains invalid parameters.</string>
+
+    <string name="error_contact_support">If the problem persists, please contact support.</string>
+    <string name="support">Support</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="permission_ok">Ok</string>
+    <string name="permission_no_thanks">No thanks</string>
+    <string name="permission_title">Permission required</string>
+    <string name="permission_not_granted">Permission %1$s not granted</string>
+    <string name="permission_notification_denied">App will not show notifications</string>
+    <string name="permission_notification_granted">App will show notifications</string>
+    <string name="permission_notification">We need you to accept permission for receiving notifications.\n\nThis is a part of core functionality of the app.\n\nWithout that You will not receive any notifications.</string>
+
+    <string name="storage_error">Storage error</string>
+    <string name="store_error_no_data_to_store">The result of requested data is empty.</string>
+
+    <string name="feature_not_created_yet">Feature not created yet 👨‍💻 %1$s</string>
+
+    <string name="discover_search">Search for more companions</string>
+
+    <string name="animal_type_button">%1$s type button</string>
+    <string name="more_button">More button</string>
+    <string name="view_details">View details</string>
+
+    <string name="discover">Discover</string>
+    <string name="search">Search</string>
+    <string name="follow">Follow</string>
+
+    <string name="type">type</string>
+    <string name="breed">breed</string>
+    <string name="select_x">Select %1$s</string>
+    <string name="gallery_image">Gallery image</string>
+
+    <string name="no_media_to_display">No media to display</string>
+    <string name="see_more_less_button">See more/less button</string>
+
+    <string name="unknown">Unknown</string>
+    <string name="baby">Baby</string>
+    <string name="young">Young</string>
+    <string name="adult">Adult</string>
+    <string name="senior">Senior</string>
+
+    <string name="mixed">Mixed</string>
+
+    <string name="female">Female</string>
+    <string name="male">male</string>
+
+    <string name="small">Small</string>
+    <string name="medium">Medium</string>
+    <string name="large">Large</string>
+    <string name="extra_large">Extra large</string>
+
+    <string name="coat_short">Extra large</string>
+    <string name="coat_medium">Extra large</string>
+    <string name="coat_long">Extra large</string>
+    <string name="coat_wire">Extra large</string>
+    <string name="coat_hairless">Extra large</string>
+    <string name="coat_curly">Extra large</string>
+
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+    <string name="notifications">Notifications</string>
+
+    <string name="notification_channel_name">PetFinderRemake general notifications</string>
+    <string name="notification_channel_description">Receive general notifications from application</string>
+</resources>

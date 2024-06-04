@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications">Notifications</string>
+    <string name="notification_icon">Notification icon</string>
+    <string name="notification_disabled_description">Notifications are disabled.\n\nTo receive notifications click button below and grant notification permission.</string>
+    <string name="notification_permanently_denied_description">Notifications are permanently denied.\n\nTo receive notifications change notifications permissions in settings.</string>
+    <string name="grant_permission">Grant permission</string>
+    <string name="navigate_to_settings">Navigate to settings</string>
+    <string name="notification_status">Notification status</string>
+</resources>

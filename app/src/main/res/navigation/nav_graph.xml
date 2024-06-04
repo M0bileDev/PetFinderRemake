@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/discoverFragment">
+
+    <fragment
+        android:id="@+id/discoverFragment"
+        android:name="com.example.petfinderremake.features.discover.presentation.screen.DiscoverFragment"
+        android:label="DiscoverFragment"
+        tools:layout="@layout/fragment_discover">
+        <action
+            android:id="@+id/action_discoverFragment_to_searchFragment"
+            app:destination="@id/searchFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.example.petfinderremake.features.search.presentation.screen.SearchFragment"
+        android:label="SearchFragment"
+        tools:layout="@layout/fragment_search">
+        <action
+            android:id="@+id/action_searchFragment_to_filterFragment"
+            app:destination="@id/filterFragment" />
+        <argument
+            android:name="filterNavArg"
+            android:defaultValue=""
+            app:argType="string" />
+        <argument
+            android:name="resultNavArg"
+            android:defaultValue=""
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/followFragment"
+        android:name="com.example.petfinderremake.features.follow.FollowFragment"
+        android:label="FollowFragment"
+        tools:layout="@layout/fragment_follow" />
+
+    <fragment
+        android:id="@+id/animalDetailsFragment"
+        android:name="com.example.petfinderremake.features.details.animals.presentation.screen.AnimalDetailsFragment"
+        android:label="AnimalDetailsFragment"
+        tools:layout="@layout/fragment_animal_details">
+        <argument
+            android:name="animalDetailsNavArg"
+            app:argType="long" />
+    </fragment>
+    <fragment
+        android:id="@+id/filterFragment"
+        android:name="com.example.petfinderremake.features.filter.presentation.screen.filter.FilterFragment"
+        android:label="FilterFragment"
+        tools:layout="@layout/fragment_filter">
+        <action
+            android:id="@+id/action_filterFragment_to_selectFragment"
+            app:destination="@id/selectFragment" />
+        <argument
+            android:name="resultNavArg"
+            android:defaultValue=""
+            app:argType="string" />
+        <argument
+            android:name="filterNavArg"
+            android:defaultValue=""
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/selectFragment"
+        android:name="com.example.petfinderremake.features.filter.presentation.screen.select.SelectFragment"
+        android:label="SelectFragment"
+        tools:layout="@layout/fragment_select">
+        <argument
+            android:name="selectNavArg"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/galleryFragment"
+        android:name="com.example.petfinderremake.features.gallery.presentation.screen.GalleryFragment"
+        android:label="GalleryFragment"
+        tools:layout="@layout/fragment_gallery">
+        <argument
+            android:name="galleryNavArg"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/notificationFragment"
+        android:name="com.example.petfinderremake.features.notifications.presentation.screen.notification.NotificationFragment"
+        android:label="NotificationFragment"
+        tools:layout="@layout/fragment_notification" >
+        <action
+            android:id="@+id/action_notificationFragment_to_notificationDetailsFragment"
+            app:destination="@id/notificationDetailsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/notificationDetailsFragment"
+        android:name="com.example.petfinderremake.features.notifications.presentation.screen.details.NotificationDetailsFragment"
+        android:label="NotificationDetailsFragment"
+        tools:layout="@layout/fragment_notification_details">
+        <argument
+            android:name="notificationIdNavArg"
+            app:argType="long" />
+    </fragment>
+</navigation>

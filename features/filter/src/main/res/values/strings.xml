@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_type">Search type</string>
+    <string name="search_breed">Search breed</string>
+    <string name="apply">Apply</string>
+    <string name="clear">Clear</string>
+    <string name="select_breed">Select breed</string>
+    <string name="select_type">Select type</string>
+    <string name="ready">Ready</string>
+    <string name="done">Done</string>
+    <string name="filter">Filter</string>
+</resources>

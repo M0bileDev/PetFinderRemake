@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">PetFinderRemake</string>
+    <string name="bottom_nav_discover">Discover</string>
+    <string name="bottom_nav_search">Search</string>
+    <string name="bottom_nav_follow">Follow</string>
+    <string name="bottom_nav_notification">Notification</string>
+</resources>

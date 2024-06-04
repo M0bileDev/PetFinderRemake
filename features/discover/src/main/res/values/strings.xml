@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="there_are_x_animals_ready_for_adoption">👋 Hi, there are %1$d animals ready for adoption </string>
+    <string name="get_to_know_some_of_them_now">Get to know some of them now</string>
+    <string name="use_the_quick_filter_to_find_the_right_companion">Use the quick filter to find the right companion</string>
+    <string name="more_companions_await">More companions await</string>
+    <string name="more_companions_search">Try to find the most suitable companion for yours</string>
+</resources>
