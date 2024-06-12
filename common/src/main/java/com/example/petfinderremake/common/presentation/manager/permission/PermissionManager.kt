@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.res.Resources
 import android.view.View
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LifecycleOwner
+import io.reactivex.rxjava3.disposables.Disposable
 import kotlinx.coroutines.Job
 
 interface PermissionManager {
@@ -40,8 +40,10 @@ interface PermissionManager {
     fun setupPermissionsReceiver(
         permissionSender: () -> PermissionSender,
         resources: Resources,
-        lifecycleOwner: LifecycleOwner
-    ): Job
+        lifecycleOwner: LifecycleOwner,
+        jobBlock: (Job) -> Unit,
+        onDispose: (Disposable) -> Unit
+    )
 
     fun runPermissions(
         activity: Activity,
