@@ -11,7 +11,11 @@ import com.example.petfinderremake.common.ext.withLifecycleOwner
 import com.example.petfinderremake.databinding.ActivityMainBinding
 import com.google.android.material.badge.BadgeDrawable
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.Job
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -19,6 +23,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainActivityViewModel by viewModels()
     private lateinit var badge: BadgeDrawable
+    private var uiJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,11 +43,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeUiState() = with(viewModel) {
-        withLifecycleOwner {
-            mainActivityUiState.collectLatest { uiState ->
-                updateFilterMenuBadge(uiState)
+        withLifecycleOwner(
+            disposableBlock = {
+                mainActivityUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateFilterMenuBadge(uiState)
+                    }.addTo(subscriptions)
+            },
+            jobBlock = {
+                uiJob = it
             }
-        }
+        )
     }
 
     private fun updateFilterMenuBadge(uiState: MainActivityUiState) = with(uiState) {
@@ -66,5 +80,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.bottomNavigation.setupWithNavController(navController)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        subscriptions.clear()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        uiJob?.cancel()
+        subscriptions.dispose()
     }
 }
