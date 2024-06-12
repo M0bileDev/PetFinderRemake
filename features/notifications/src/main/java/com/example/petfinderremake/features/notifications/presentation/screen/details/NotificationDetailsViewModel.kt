@@ -1,17 +1,16 @@
 package com.example.petfinderremake.features.notifications.presentation.screen.details
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.petfinderremake.common.domain.model.notification.Notification
 import com.example.petfinderremake.common.domain.result.onSuccess
 import com.example.petfinderremake.common.domain.usecase.notification.get.GetSingleNotificationUseCase
 import com.example.petfinderremake.common.domain.usecase.notification.update.UpdateNotificationUseCase
+import com.example.petfinderremake.common.ext.getValueOrThrow
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -20,42 +19,37 @@ class NotificationDetailsViewModel @Inject constructor(
     private val updateNotificationUseCase: UpdateNotificationUseCase
 ) : ViewModel() {
 
-    private var _notificationDetailsUiState = MutableStateFlow(NotificationDetailsUiState())
-    val notificationDetailsUiState get() = _notificationDetailsUiState.asStateFlow()
+    private val notificationDetailsUiStateSubject =
+        BehaviorSubject.createDefault(NotificationDetailsUiState())
+    val notificationDetailsUiState = notificationDetailsUiStateSubject.hide()
 
-    private var getSingleNotificationJob: Job? = null
-    private var updateNotificationDisplayedJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
     fun setupNavArgs(notificationId: Long) {
         getSingleNotification(notificationId)
     }
 
     private fun getSingleNotification(notificationId: Long) {
-        getSingleNotificationJob?.cancel()
-        getSingleNotificationJob = viewModelScope.launch {
-            getSingleNotificationUseCase(notificationId).collectLatest { result ->
+        getSingleNotificationUseCase(notificationId).subscribeOn(Schedulers.io())
+            .subscribe { result ->
                 with(result) {
                     onSuccess {
                         val notification = it.success
-                        _notificationDetailsUiState.value = NotificationDetailsUiState(notification)
+                        val uiState = notificationDetailsUiStateSubject.getValueOrThrow()
+                        notificationDetailsUiStateSubject.onNext(uiState.copy(notification = notification))
                         updateNotificationDisplayed(notification.copy(displayed = true))
                     }
                 }
-            }
-        }
+            }.addTo(subscriptions)
     }
 
     private fun updateNotificationDisplayed(notification: Notification) {
-        updateNotificationDisplayedJob?.cancel()
-        updateNotificationDisplayedJob = viewModelScope.launch {
-            updateNotificationUseCase(notification)
-        }
+        updateNotificationUseCase(notification).subscribeOn(Schedulers.io()).subscribe()
+            .addTo(subscriptions)
     }
 
     override fun onCleared() {
-        super.onCleared()
-        getSingleNotificationJob?.cancel()
-        updateNotificationDisplayedJob?.cancel()
+        subscriptions.dispose()
     }
 
 }

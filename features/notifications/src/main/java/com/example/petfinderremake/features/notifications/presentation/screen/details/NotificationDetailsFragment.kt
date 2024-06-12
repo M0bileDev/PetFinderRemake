@@ -11,8 +11,11 @@ import com.example.petfinderremake.common.presentation.navigation.CommonNavigati
 import com.example.petfinderremake.features.notifications.databinding.FragmentNotificationDetailsBinding
 import com.example.petfinderremake.features.notifications.presentation.navigation.NotificationNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -29,6 +32,8 @@ class NotificationDetailsFragment : Fragment() {
     private val viewModel: NotificationDetailsViewModel by viewModels()
 
     private var observeUiStateJob: Job? = null
+
+    private val subscriptions = CompositeDisposable()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -53,12 +58,19 @@ class NotificationDetailsFragment : Fragment() {
     }
 
     private fun observeUiState() = with(viewModel) {
-        observeUiStateJob = withLifecycleOwner {
-            notificationDetailsUiState.collectLatest { uiState ->
-                updateView(uiState)
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                notificationDetailsUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateView(uiState)
+                    }.addTo(subscriptions)
             }
-        }
-
+        )
     }
 
     private fun updateView(uiState: NotificationDetailsUiState) = with(uiState) {
@@ -76,6 +88,12 @@ class NotificationDetailsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         observeUiStateJob?.cancel()
+        subscriptions.clear()
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }
