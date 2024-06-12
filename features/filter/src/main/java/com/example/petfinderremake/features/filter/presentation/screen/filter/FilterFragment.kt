@@ -7,14 +7,17 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.example.petfinderremake.common.domain.model.isNotEmpty
-import com.example.petfinderremake.common.ext.observeError
+import com.example.petfinderremake.common.ext.subscribeError
 import com.example.petfinderremake.common.ext.withLifecycleOwner
 import com.example.petfinderremake.common.presentation.navigation.CommonNavigation
 import com.example.petfinderremake.features.filter.databinding.FragmentFilterBinding
 import com.example.petfinderremake.features.filter.presentation.navigation.FilterNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,6 +30,11 @@ class FilterFragment : Fragment() {
     private var observeResultJob: Job? = null
     private var observeEventJob: Job? = null
     private var observeUiStateJob: Job? = null
+
+    private var networkErrorJob: Job? = null
+    private var storageErrorJob: Job? = null
+
+    private val subscriptions = CompositeDisposable()
 
     @Inject
     lateinit var filterNavigation: FilterNavigation
@@ -44,8 +52,18 @@ class FilterFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        observeError(viewModel.storageError, requireView())
-        observeError(viewModel.networkError, requireView())
+        subscribeError(
+            requireView(),
+            viewModel.storageError,
+            { storageErrorJob = it },
+            { it.addTo(subscriptions) }
+        )
+        subscribeError(
+            requireView(),
+            viewModel.networkError,
+            { networkErrorJob = it },
+            { it.addTo(subscriptions) }
+        )
         setupNavArgs()
         observeNavigationResult()
         setupFilterTypeGroup()
@@ -78,28 +96,42 @@ class FilterFragment : Fragment() {
     }
 
     private fun observeNavigationResult() = with(filterNavigation) {
-        observeResultJob = withLifecycleOwner {
-            observeResultNavArg(this@FilterFragment).collectLatest { resultNavArg ->
-                viewModel.setupResultNavArg(resultNavArg)
-                clearResultNavArg(this@FilterFragment)
+        withLifecycleOwner(
+            jobBlock = { observeResultJob = it },
+            disposableBlock = {
+                observeResultNavArg(this@FilterFragment)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { resultNavArg ->
+                        viewModel.setupResultNavArg(resultNavArg)
+                        clearResultNavArg(this@FilterFragment)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun observeFilterEvent() {
-        observeEventJob = withLifecycleOwner {
-            viewModel.filterEvent.collectLatest { event ->
-                when (event) {
-                    is FilterViewModel.FilterEvent.NavigateBackWithResult -> {
-                        filterNavigation.navigateBackWithResult(this, event.resultNavArg)
-                    }
+        withLifecycleOwner(
+            jobBlock = {
+                observeEventJob = it
+            },
+            disposableBlock = {
+                viewModel.filterEvent
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            is FilterViewModel.FilterEvent.NavigateBackWithResult -> {
+                                filterNavigation.navigateBackWithResult(this, event.resultNavArg)
+                            }
 
-                    is FilterViewModel.FilterEvent.NavigateToSelect -> {
-                        filterNavigation.navigateToSelect(this, event.selectNavArg)
-                    }
-                }
+                            is FilterViewModel.FilterEvent.NavigateToSelect -> {
+                                filterNavigation.navigateToSelect(this, event.selectNavArg)
+                            }
+                        }
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun setupBottomButtons() = with(binding) {
@@ -125,14 +157,22 @@ class FilterFragment : Fragment() {
     }
 
     private fun observeUiState() {
-        observeUiStateJob = withLifecycleOwner {
-            viewModel.filterUiState.collectLatest { uiState ->
-                updateRefresh(uiState)
-                updateFilterTypeGroup(uiState)
-                updateFilterBreedsGroup(uiState)
-                updateBottom(uiState)
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                viewModel.filterUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateRefresh(uiState)
+                        updateFilterTypeGroup(uiState)
+                        updateFilterBreedsGroup(uiState)
+                        updateBottom(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateRefresh(uiState: FilterUiState) = with(uiState) {
@@ -158,7 +198,13 @@ class FilterFragment : Fragment() {
         observeResultJob?.cancel()
         observeEventJob?.cancel()
         observeUiStateJob?.cancel()
+        subscriptions.clear()
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 
 }
