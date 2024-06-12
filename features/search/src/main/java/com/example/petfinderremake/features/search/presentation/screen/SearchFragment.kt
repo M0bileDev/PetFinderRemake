@@ -9,7 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup
-import com.example.petfinderremake.common.ext.observeError
+import com.example.petfinderremake.common.ext.subscribeError
 import com.example.petfinderremake.common.ext.withLifecycleOwner
 import com.example.petfinderremake.common.presentation.adapter.AnimalGridAdapter
 import com.example.petfinderremake.common.presentation.adapter.model.AnimalAdapterEnum
@@ -21,12 +21,16 @@ import com.example.petfinderremake.common.presentation.screen.gallery.GallerySen
 import com.example.petfinderremake.features.search.R
 import com.example.petfinderremake.features.search.databinding.FragmentSearchBinding
 import com.example.petfinderremake.features.search.presentation.navigation.SearchNavigation
+import com.example.petfinderremake.logging.Logger
 import com.google.android.material.badge.BadgeDrawable
 import com.google.android.material.badge.BadgeUtils
 import com.google.android.material.badge.ExperimentalBadgeUtils
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 
@@ -63,6 +67,11 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     private var observeGalleryReceiverJob: Job? = null
     private var observeAnimalDetailsReceiverJob: Job? = null
 
+    private var storageErrorJob: Job? = null
+    private var networkErrorJob: Job? = null
+
+    private val subscriptions = CompositeDisposable()
+
     private var searchResultViewType = ResultViewType.GRID
     private lateinit var badge: BadgeDrawable
 
@@ -75,8 +84,18 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        observeError(viewModel.storageError, requireView())
-        observeError(viewModel.networkError, requireView())
+        subscribeError(
+            requireView(),
+            viewModel.storageError,
+            { storageErrorJob = it },
+            { it.addTo(subscriptions) }
+        )
+        subscribeError(
+            requireView(),
+            viewModel.networkError,
+            { networkErrorJob = it },
+            { it.addTo(subscriptions) }
+        )
         setupNavArgs()
         observeNavigationResult()
         observeSearchEvent()
@@ -90,18 +109,21 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     private fun setupAnimalDetails() {
-        observeAnimalDetailsReceiverJob?.cancel()
-        observeAnimalDetailsReceiverJob = setupAnimalDetailsReceiver(
+        setupAnimalDetailsReceiver(
             { viewModel },
-            { animalDetailsNavigation.navigateToAnimalDetails(this, it) }
+            { animalDetailsNavigation.navigateToAnimalDetails(this, it) },
+            { observeAnimalDetailsReceiverJob = it },
+            { it.addTo(subscriptions) }
         )
     }
 
     private fun setupGallery() {
-        observeGalleryReceiverJob?.cancel()
-        observeGalleryReceiverJob = setupGalleryReceiver(
+        setupGalleryReceiver(
             { viewModel },
-            { galleryNavigation.navigateToGallery(this, it) })
+            { galleryNavigation.navigateToGallery(this, it) },
+            { observeGalleryReceiverJob = it },
+            { it.addTo(subscriptions) }
+        )
     }
 
     private fun setupRefresh() = with(binding) {
@@ -117,12 +139,20 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     private fun observeNavigationResult() = with(searchNavigation) {
-        observeResultJob = withLifecycleOwner {
-            observeResultNavArg(this@SearchFragment).collectLatest { resultNavArg ->
-                viewModel.setupResultNavArg(resultNavArg)
-                clearResultNavArg(this@SearchFragment)
+        withLifecycleOwner(
+            jobBlock = {
+                observeResultJob = it
+            },
+            disposableBlock = {
+                observeResultNavArg(this@SearchFragment)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { resultNavArg ->
+                        viewModel.setupResultNavArg(resultNavArg)
+                        clearResultNavArg(this@SearchFragment)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun setupFilterMenuBadge() {
@@ -130,22 +160,31 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         BadgeUtils.attachBadgeDrawable(badge, binding.searchToolbar, R.id.filter)
     }
 
-    private fun observeSearchEvent() {
-        observeEventJob = withLifecycleOwner {
-            viewModel.searchEvent.collectLatest { event ->
-                when (event) {
-                    is SearchViewModel.SearchEvent.NavigateToFilter -> {
-                        searchNavigation.navigateToFilter(
-                            this@SearchFragment,
-                            filterNavArg = event.filterNavArg
-                        )
-                    }
-                }
+    private fun observeSearchEvent() = with(viewModel) {
+        withLifecycleOwner(
+            jobBlock = {
+                observeEventJob = it
+            },
+            disposableBlock = {
+                searchEvent
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            is SearchViewModel.SearchEvent.NavigateToFilter -> {
+                                searchNavigation.navigateToFilter(
+                                    this@SearchFragment,
+                                    filterNavArg = event.filterNavArg
+                                )
+                            }
+                        }
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateFilterMenuBadge(uiState: SearchUiState) = with(uiState) {
+        Logger.d("log001 isFilterActive $isFilterActive")
         if (isFilterActive) {
             badge.backgroundColor =
                 resources.getColor(androidx.appcompat.R.color.error_color_material_dark, null)
@@ -224,14 +263,22 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         }
     }
 
-    private fun observeUiState() {
-        observeUiStateJob = withLifecycleOwner {
-            viewModel.searchUiState.collectLatest { uiState ->
-                updateAnimalGridAdapter(uiState)
-                updateFilterMenuBadge(uiState)
-                updateRefresh(uiState)
+    private fun observeUiState() = with(viewModel) {
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                searchUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateAnimalGridAdapter(uiState)
+                        updateFilterMenuBadge(uiState)
+                        updateRefresh(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateRefresh(uiState: SearchUiState) = with(uiState) {
@@ -254,8 +301,16 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         observeUiStateJob?.cancel()
         observeGalleryReceiverJob?.cancel()
         observeAnimalDetailsReceiverJob?.cancel()
+        storageErrorJob?.cancel()
+        networkErrorJob?.cancel()
+        subscriptions.clear()
         BadgeUtils.detachBadgeDrawable(badge, binding.searchToolbar, R.id.filter)
         binding.searchRecyclerView.adapter = null
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }
