@@ -1,9 +1,9 @@
 package com.example.petfinderremake.features.discover.presentation.screen
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.petfinderremake.common.domain.model.animal.AnimalType
 import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnimals
+import com.example.petfinderremake.common.domain.result.error.Error
 import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.domain.result.error.StorageError
 import com.example.petfinderremake.common.domain.result.error.onNetworkError
@@ -19,13 +19,12 @@ import com.example.petfinderremake.common.presentation.screen.gallery.GallerySen
 import com.example.petfinderremake.features.discover.domain.usecase.get.GetDiscoverPaginatedAnimalsUseCase
 import com.example.petfinderremake.features.discover.domain.usecase.request.RequestDiscoverPageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import io.reactivex.rxjava3.subjects.PublishSubject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,64 +35,36 @@ class DiscoverViewModel @Inject constructor(
     private val getAnimalTypesUseCase: GetAnimalTypesUseCase,
 ) : ViewModel(), GallerySender, AnimalDetailsSender {
 
-    override val gallerySenderEvent: Channel<GallerySender.SenderEvent> = Channel()
-    override val animalDetailsSenderEvent: Channel<AnimalDetailsSender.SenderEvent> = Channel()
-
     sealed interface DiscoverEvent {
         data class NavigateToSearch(val typeName: String) : DiscoverEvent
     }
 
-    private var navigateToSearchJob: Job? = null
-    private var navigateToAnimalDetailsJob: Job? = null
-    private var gallerySenderJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
-    fun navigateToSearch(typeName: String = "") {
-        navigateToSearchJob?.cancel()
-        navigateToSearchJob = viewModelScope.launch {
-            discoverEventChannel.send(DiscoverEvent.NavigateToSearch(typeName))
-        }
-    }
+    override val gallerySenderSubject = PublishSubject.create<GallerySender.SenderEvent>()
+    override val animalDetailsSenderSubject =
+        PublishSubject.create<AnimalDetailsSender.SenderEvent>()
 
-    override fun navigateToAnimalDetails(id: Long) {
-        navigateToAnimalDetailsJob?.cancel()
-        navigateToAnimalDetailsJob = viewModelScope.runAnimalDetailsAction(id)
-    }
+    private val discoverPageLoadingSubject = BehaviorSubject.createDefault(false)
+    private val animalTypesLoadingSubject = BehaviorSubject.createDefault(false)
+    private val paginatedAnimalsSubject =
+        BehaviorSubject.createDefault(PaginatedAnimals.initPaginatedAnimals)
+    private val animalTypesSubject = BehaviorSubject.createDefault<List<AnimalType>>(emptyList())
 
-    override fun navigateToGallery(galleryArg: GallerySender.GalleryArg) {
-        galleryArg.runAction(actionWithId = { actionId ->
-            val animal = paginatedAnimals.value.animals.find { animal -> animal.id == actionId }
-                ?: throw Exception()
-            val media = animal.media
-            gallerySenderJob?.cancel()
-            gallerySenderJob = viewModelScope.runGalleryAction(media)
-        })
-    }
+    private val discoverEventSubject = PublishSubject.create<DiscoverEvent>()
+    val discoverEvent = discoverEventSubject.hide()
 
-    private var discoverEventChannel = Channel<DiscoverEvent>()
-    val discoverEvent = discoverEventChannel.receiveAsFlow()
+    private val networkErrorSubject = PublishSubject.create<NetworkError>()
+    val networkError = networkErrorSubject.hide().map { it as Error }
 
-    private val discoverPageLoading = MutableStateFlow(false)
-    private val animalTypesLoading = MutableStateFlow(false)
-    private val paginatedAnimals = MutableStateFlow(PaginatedAnimals.initPaginatedAnimals)
-    private val animalTypes = MutableStateFlow<List<AnimalType>>(emptyList())
+    private var storageErrorSubject = PublishSubject.create<StorageError>()
+    val storageError = storageErrorSubject.hide().map { it as Error }
 
-    private var requestDiscoverPageJob: Job? = null
-    private var observeDiscoverPaginatedAnimalsJob: Job? = null
-    private var requestAnimalTypesJob: Job? = null
-    private var observeAnimalTypesJob: Job? = null
-
-    private var networkErrorChannel = Channel<NetworkError>()
-    val networkError get() = networkErrorChannel.receiveAsFlow()
-
-    private var storageErrorChannel = Channel<StorageError>()
-    val storageError get() = storageErrorChannel.receiveAsFlow()
-
-
-    val discoverUiState = combine(
-        discoverPageLoading,
-        animalTypesLoading,
-        paginatedAnimals,
-        animalTypes
+    val discoverUiState = Observable.combineLatest(
+        discoverPageLoadingSubject,
+        animalTypesLoadingSubject,
+        paginatedAnimalsSubject,
+        animalTypesSubject
     ) { discoverPageLoading, animalTypesLoading, paginatedAnimals, animalTypes ->
 
         val (animals, pagination) = paginatedAnimals
@@ -119,39 +90,55 @@ class DiscoverViewModel @Inject constructor(
         )
     }
 
+    fun navigateToSearch(typeName: String = "") {
+        discoverEventSubject.onNext(DiscoverEvent.NavigateToSearch(typeName))
+    }
+
+    override fun navigateToAnimalDetails(id: Long) {
+        runAnimalDetailsAction(id)
+    }
+
+    override fun navigateToGallery(galleryArg: GallerySender.GalleryArg) {
+        galleryArg.runAction(actionWithId = { actionId ->
+            val animals = paginatedAnimalsSubject.value?.animals ?: throw Exception()
+            val foundedAnimal =
+                animals.find { animal -> animal.id == actionId } ?: throw Exception()
+            val media = foundedAnimal.media
+            runGalleryAction(media)
+        })
+    }
+
+
     init {
         observeDiscoverPage()
         observeAnimalTypes()
-//        requestData()
+        requestData()
     }
 
     private fun observeDiscoverPage() {
-        observeDiscoverPaginatedAnimalsJob?.cancel()
-        observeDiscoverPaginatedAnimalsJob = viewModelScope.launch {
-            getDiscoverPaginatedAnimalsUseCase()
-                .collectLatest { result ->
-                    with(result) {
-                        onSuccess {
-                            paginatedAnimals.value = it.success
-                        }
+        getDiscoverPaginatedAnimalsUseCase()
+            .subscribeOn(Schedulers.io())
+            .subscribe { result ->
+                with(result) {
+                    onSuccess {
+                        paginatedAnimalsSubject.onNext(it.success)
                     }
-
                 }
-        }
+            }.addTo(subscriptions)
     }
 
+
     private fun observeAnimalTypes() {
-        observeAnimalTypesJob?.cancel()
-        observeAnimalTypesJob = viewModelScope.launch {
-            getAnimalTypesUseCase()
-                .collectLatest { result ->
-                    with(result) {
-                        onSuccess {
-                            animalTypes.value = it.success
-                        }
+        getAnimalTypesUseCase()
+            .subscribeOn(Schedulers.io())
+            .subscribe { result ->
+                with(result) {
+                    onSuccess {
+                        animalTypesSubject.onNext(it.success)
                     }
                 }
-        }
+            }.addTo(subscriptions)
+
     }
 
     fun requestData() {
@@ -160,45 +147,41 @@ class DiscoverViewModel @Inject constructor(
     }
 
     private fun requestDiscoverPage() {
-        requestDiscoverPageJob?.cancel()
-        requestDiscoverPageJob = viewModelScope.launch {
-            requestDiscoverPageUseCase(
-                onLoading = { loading ->
-                    discoverPageLoading.value = loading
-                })
-                .onNetworkError(onNetworkError = {
-                    networkErrorChannel.send(it)
-                })
-                .onStorageError(onStorageError = {
-                    storageErrorChannel.send(it)
-                })
-        }
+        requestDiscoverPageUseCase(
+            onLoading = { loading ->
+                discoverPageLoadingSubject.onNext(loading)
+            })
+            .subscribeOn(Schedulers.io())
+            .subscribe { result ->
+                result
+                    .onNetworkError(onNetworkError = { networkError ->
+                        networkErrorSubject.onNext(networkError)
+                    })
+                    .onStorageError(onStorageError = { storageError ->
+                        storageErrorSubject.onNext(storageError)
+                    })
+            }.addTo(subscriptions)
     }
 
     private fun requestAnimalTypes() {
-        requestAnimalTypesJob?.cancel()
-        requestAnimalTypesJob = viewModelScope.launch {
-            requestAnimalTypesUseCase(
-                onLoading = { loading ->
-                    animalTypesLoading.value = loading
-                })
-                .onNetworkError(onNetworkError = {
-                    networkErrorChannel.send(it)
-                })
-                .onStorageError(onStorageError = {
-                    storageErrorChannel.send(it)
-                })
-        }
+        requestAnimalTypesUseCase(
+            onLoading = { loading ->
+                animalTypesLoadingSubject.onNext(loading)
+            })
+            .subscribeOn(Schedulers.io())
+            .subscribe { result ->
+                result
+                    .onNetworkError(onNetworkError = {
+                        networkErrorSubject.onNext(it)
+                    })
+                    .onStorageError(onStorageError = {
+                        storageErrorSubject.onNext(it)
+                    })
+            }.addTo(subscriptions)
     }
 
     override fun onCleared() {
-        requestDiscoverPageJob?.cancel()
-        requestAnimalTypesJob?.cancel()
-        observeDiscoverPaginatedAnimalsJob?.cancel()
-        observeAnimalTypesJob?.cancel()
-        gallerySenderJob?.cancel()
-        navigateToSearchJob?.cancel()
-        navigateToAnimalDetailsJob?.cancel()
+        subscriptions.dispose()
     }
 
 }

@@ -8,7 +8,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.petfinderremake.common.ext.observeError
+import com.example.petfinderremake.common.ext.subscribeError
 import com.example.petfinderremake.common.ext.withLifecycleOwner
 import com.example.petfinderremake.common.presentation.adapter.AnimalGridAdapter
 import com.example.petfinderremake.common.presentation.adapter.AnimalTypeGridAdapter
@@ -21,8 +21,11 @@ import com.example.petfinderremake.features.discover.R
 import com.example.petfinderremake.features.discover.databinding.FragmentDiscoverBinding
 import com.example.petfinderremake.features.discover.presentation.navigation.DiscoverNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -48,6 +51,11 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     private var observeGalleryReceiverJob: Job? = null
     private var observeAnimalDetailsReceiverJob: Job? = null
 
+    private var networkErrorJob: Job? = null
+    private var storageErrorJob: Job? = null
+
+    private val subscriptions = CompositeDisposable()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -58,8 +66,20 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        observeError(viewModel.storageError, requireView())
-        observeError(viewModel.networkError, requireView())
+        subscribeError(
+            requireView(),
+            viewModel.storageError,
+            { networkErrorJob = it },
+            { it.addTo(subscriptions) }
+        )
+
+        subscribeError(
+            requireView(),
+            viewModel.networkError,
+            { storageErrorJob = it },
+            { it.addTo(subscriptions) }
+        )
+
         setupSwipeRefresh()
         setupAnimalRecyclerView()
         setupAnimalTypeRecyclerView()
@@ -71,18 +91,21 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     private fun setupAnimalDetails() {
-        observeAnimalDetailsReceiverJob?.cancel()
-        observeAnimalDetailsReceiverJob = setupAnimalDetailsReceiver(
+        setupAnimalDetailsReceiver(
             { viewModel },
-            { animalDetailsNavigation.navigateToAnimalDetails(this, it) }
+            { animalDetailsNavigation.navigateToAnimalDetails(this, it) },
+            { observeAnimalDetailsReceiverJob = it },
+            { it.addTo(subscriptions) }
         )
     }
 
     private fun setupGallery() {
-        observeGalleryReceiverJob?.cancel()
-        observeGalleryReceiverJob = setupGalleryReceiver(
+        setupGalleryReceiver(
             { viewModel },
-            { galleryNavigation.navigateToGallery(this, it) })
+            { galleryNavigation.navigateToGallery(this, it) },
+            { observeGalleryReceiverJob = it },
+            { it.addTo(subscriptions) }
+        )
     }
 
     private fun setupSwipeRefresh() =
@@ -127,28 +150,44 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     private fun observeDiscoverEvent() {
-        observeEventJob = withLifecycleOwner {
-            viewModel.discoverEvent.collectLatest { event ->
-                when (event) {
-                    is DiscoverViewModel.DiscoverEvent.NavigateToSearch -> {
-                        discoverNavigation.navigateToSearch(
-                            this@DiscoverFragment,
-                            event.typeName
-                        )
-                    }
-                }
+        withLifecycleOwner(
+            jobBlock = {
+                observeEventJob = it
+            },
+            disposableBlock = {
+                viewModel.discoverEvent
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            is DiscoverViewModel.DiscoverEvent.NavigateToSearch -> {
+                                discoverNavigation.navigateToSearch(
+                                    this@DiscoverFragment,
+                                    event.typeName
+                                )
+                            }
+                        }
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun observeUiState() {
-        observeUiStateJob = withLifecycleOwner {
-            viewModel.discoverUiState.collectLatest { uiState ->
-                updateSwipeRefresh(uiState)
-                updateTopDiscover(uiState)
-                updateBodyDiscover(uiState)
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                viewModel.discoverUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateSwipeRefresh(uiState)
+                        updateTopDiscover(uiState)
+                        updateBodyDiscover(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
 
@@ -192,8 +231,16 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         observeEventJob?.cancel()
         observeUiStateJob?.cancel()
         observeGalleryReceiverJob?.cancel()
+        networkErrorJob?.cancel()
+        storageErrorJob?.cancel()
+        subscriptions.clear()
         binding.discoverTop.discoverTopRecyclerView.adapter = null
         binding.discoverBody.discoverBodyRecyclerView.adapter = null
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }
