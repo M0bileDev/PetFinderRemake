@@ -5,13 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.rxjava3.RxPreferenceDataStoreBuilder
+import androidx.datastore.rxjava3.RxDataStore
 import com.example.petfinderremake.common.data.preferences.PreferencesConstants
 
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = PreferencesConstants.PETFINDER_DATASTORE_NAME)
+fun Context.rxDataStore(): RxDataStore<Preferences> {
+    return RxPreferenceDataStoreBuilder(this, PreferencesConstants.PETFINDER_DATASTORE_NAME).build()
+}
 
 fun Context.openWebPage(url: String) {
     val webpage: Uri = Uri.parse(url)
