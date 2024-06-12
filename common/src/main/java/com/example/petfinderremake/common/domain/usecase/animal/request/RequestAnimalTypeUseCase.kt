@@ -1,13 +1,11 @@
 package com.example.petfinderremake.common.domain.usecase.animal.request
 
-import com.example.petfinderremake.common.domain.model.animal.AnimalType
 import com.example.petfinderremake.common.domain.repositories.AnimalRepository
 import com.example.petfinderremake.common.domain.result.Result
 import com.example.petfinderremake.common.domain.result.RootError
 import com.example.petfinderremake.common.domain.result.error.ArgumentError
 import com.example.petfinderremake.common.domain.result.error.NetworkError
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import io.reactivex.rxjava3.core.Observable
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -15,34 +13,38 @@ class RequestAnimalTypeUseCase @Inject constructor(
     private val animalRepository: AnimalRepository
 ) {
 
-    suspend operator fun invoke(
+    operator fun invoke(
         type: String,
         onLoading: (Boolean) -> Unit
-    ): Result<Unit, RootError> {
-        return withContext(Dispatchers.IO) {
+    ): Observable<Result<Unit, RootError>> {
 
-            onLoading(true)
-            val singleType: AnimalType
-
-
-            if (type.isEmpty()) {
-                onLoading(false)
-                return@withContext Result.Error(ArgumentError.ARGUMENT_IS_EMPTY)
+        return animalRepository.requestAnimalType(type)
+            .doOnSubscribe {
+                onLoading(true)
             }
+            .flatMap { data ->
+                Observable.fromCallable<Result<Unit, RootError>> {
+                    when {
+                        type.isEmpty() -> {
+                            Result.Error(ArgumentError.ARGUMENT_IS_EMPTY)
+                        }
 
-            try {
-                singleType = animalRepository.requestAnimalType(type)
-            } catch (exception: HttpException) {
-                onLoading(false)
-                val networkError =
-                    NetworkError.entries.find { it.code == exception.code() }
+                        else -> {
+                            animalRepository.storeAnimalTypes(listOf(data))
+                            Result.Success(Unit)
+                        }
+                    }
+                }
+            }.onErrorResumeWith { error ->
+                if (error is HttpException) {
+                    val networkError = NetworkError.entries.find { it.code == error.code() }
                         ?: throw NetworkError.NetworkErrorTypeException()
-                return@withContext Result.Error(networkError)
+                    Result.Error(networkError)
+                } else {
+                    throw Exception()
+                }
+            }.doOnNext {
+                onLoading(false)
             }
-
-            animalRepository.storeAnimalTypes(listOf(singleType))
-                .run { onLoading(false) }
-                .run { Result.Success(Unit) }
-        }
     }
 }
