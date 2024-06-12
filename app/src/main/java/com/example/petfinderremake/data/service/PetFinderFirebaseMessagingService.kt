@@ -7,10 +7,8 @@ import com.example.petfinderremake.logging.Logger
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import javax.inject.Inject
@@ -18,8 +16,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PetFinderFirebaseMessagingService : FirebaseMessagingService() {
 
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.IO + job)
+    private val subscriptions = CompositeDisposable()
 
     @Inject
     lateinit var insertNotificationUseCase: InsertNotificationUseCase
@@ -40,22 +37,23 @@ class PetFinderFirebaseMessagingService : FirebaseMessagingService() {
         val title = data["title"].orEmpty()
         val description = data["body"].orEmpty()
 
-        scope.launch {
-            insertNotificationUseCase(
-                Notification(
-                    title = title,
-                    description = description,
-                    createdAt = createdAt
-                )
+
+        insertNotificationUseCase(
+            Notification(
+                title = title,
+                description = description,
+                createdAt = createdAt
             )
-        }
+        ).subscribe()
+            .addTo(subscriptions)
+
 
         notificationManager.showNotification(title, description)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        job.cancel()
+        subscriptions.dispose()
     }
 
     companion object {
