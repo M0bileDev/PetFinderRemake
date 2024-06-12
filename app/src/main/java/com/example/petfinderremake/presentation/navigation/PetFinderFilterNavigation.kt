@@ -17,6 +17,7 @@ import com.example.petfinderremake.features.filter.presentation.navigation.RESUL
 import com.example.petfinderremake.features.filter.presentation.screen.filter.FilterFragmentArgs
 import com.example.petfinderremake.features.filter.presentation.screen.filter.FilterFragmentDirections
 import com.squareup.moshi.Moshi
+import io.reactivex.rxjava3.core.Observable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -42,9 +43,9 @@ class PetFinderFilterNavigation @Inject constructor(
         Unit
     }
 
-    override fun observeResultNavArg(fragment: Fragment): Flow<AnimalParameters> =
+    override fun observeResultNavArg(fragment: Fragment): Observable<AnimalParameters> =
         with(fragment) {
-            getNavigationResult(RESULT_KEY).asFlow().map { it.toAnimalParameters(moshi) }
+            getNavigationResult(RESULT_KEY).map { it.toAnimalParameters(moshi) }
         }
 
     override fun clearResultNavArg(fragment: Fragment) =

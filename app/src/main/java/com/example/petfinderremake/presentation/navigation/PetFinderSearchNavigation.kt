@@ -1,7 +1,6 @@
 package com.example.petfinderremake.presentation.navigation
 
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.asFlow
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.petfinderremake.common.domain.model.AnimalParameters
@@ -14,8 +13,7 @@ import com.example.petfinderremake.features.search.presentation.navigation.Searc
 import com.example.petfinderremake.features.search.presentation.screen.SearchFragmentArgs
 import com.example.petfinderremake.features.search.presentation.screen.SearchFragmentDirections
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import io.reactivex.rxjava3.core.Observable
 import javax.inject.Inject
 
 class PetFinderSearchNavigation @Inject constructor(
@@ -40,9 +38,9 @@ class PetFinderSearchNavigation @Inject constructor(
         Unit
     }
 
-    override fun observeResultNavArg(fragment: Fragment): Flow<AnimalParameters> =
+    override fun observeResultNavArg(fragment: Fragment): Observable<AnimalParameters> =
         with(fragment) {
-            getNavigationResult(RESULT_KEY).asFlow().map { it.toAnimalParameters(moshi) }
+            getNavigationResult(RESULT_KEY).map { it.toAnimalParameters(moshi) }
         }
 
     override fun clearResultNavArg(fragment: Fragment) =
