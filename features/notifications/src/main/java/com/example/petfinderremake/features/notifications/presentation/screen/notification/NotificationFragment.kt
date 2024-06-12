@@ -21,8 +21,11 @@ import com.example.petfinderremake.features.notifications.databinding.FragmentNo
 import com.example.petfinderremake.features.notifications.presentation.adapter.NotificationAdapter
 import com.example.petfinderremake.features.notifications.presentation.navigation.NotificationNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -51,6 +54,8 @@ class NotificationFragment : Fragment() {
     private var observeUiStateJob: Job? = null
     private var observePermissionReceiverJob: Job? = null
     private var observeEventJob: Job? = null
+
+    private val subscriptions = CompositeDisposable()
 
     override fun onResume() {
         super.onResume()
@@ -98,10 +103,16 @@ class NotificationFragment : Fragment() {
     private fun setupPermissionManager(view: View, context: Context) = with(viewModel) {
         permissionManager.apply {
             fragmentSetup(context, view)
-            observePermissionReceiverJob = setupPermissionsReceiver(
+            setupPermissionsReceiver(
                 permissionSender = { this@with },
                 resources = resources,
-                lifecycleOwner = this@NotificationFragment.viewLifecycleOwner
+                lifecycleOwner = this@NotificationFragment.viewLifecycleOwner,
+                jobBlock = {
+                    observePermissionReceiverJob = it
+                },
+                onDispose = {
+                    it.addTo(subscriptions)
+                }
             )
             setupActions(
                 actionGrantedSetup = {
@@ -135,18 +146,26 @@ class NotificationFragment : Fragment() {
     }
 
     private fun observeNotificationEvent() = with(viewModel) {
-        observeEventJob = withLifecycleOwner {
-            notificationEvent.collectLatest { event ->
-                when (event) {
-                    is NotificationViewModel.NotificationEvent.NavigateToNotificationDetails -> {
-                        notificationNavigation.navigateToNotificationDetails(
-                            this@NotificationFragment,
-                            event.notificationId
-                        )
-                    }
-                }
+        withLifecycleOwner(
+            jobBlock = {
+                observeEventJob = it
+            },
+            disposableBlock = {
+                notificationEvent
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            is NotificationViewModel.NotificationEvent.NavigateToNotificationDetails -> {
+                                notificationNavigation.navigateToNotificationDetails(
+                                    this@NotificationFragment,
+                                    event.notificationId
+                                )
+                            }
+                        }
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun setupRecyclerView() = with(viewModel) {
@@ -180,17 +199,24 @@ class NotificationFragment : Fragment() {
                     viewModel.runPermissionRationale(permission)
                 }
             )
-
         }
     }
 
     private fun observeUiState() = with(viewModel) {
-        observeUiStateJob = withLifecycleOwner {
-            notificationUiState.collectLatest { uiState ->
-                updateView(uiState)
-                updateRecyclerView(uiState)
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                notificationUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateView(uiState)
+                        updateRecyclerView(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateRecyclerView(uiState: NotificationUiState) = with(uiState) {
@@ -215,7 +241,13 @@ class NotificationFragment : Fragment() {
         observeUiStateJob?.cancel()
         observePermissionReceiverJob?.cancel()
         observeEventJob?.cancel()
+        subscriptions.clear()
         binding.notificationRecyclerView.adapter = null
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }

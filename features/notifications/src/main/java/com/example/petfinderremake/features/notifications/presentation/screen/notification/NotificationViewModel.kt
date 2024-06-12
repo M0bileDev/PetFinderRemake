@@ -1,7 +1,6 @@
 package com.example.petfinderremake.features.notifications.presentation.screen.notification
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.petfinderremake.common.domain.model.notification.Notification
 import com.example.petfinderremake.common.domain.result.onSuccess
 import com.example.petfinderremake.common.domain.usecase.notification.get.GetAllNotificationsUseCase
@@ -10,13 +9,12 @@ import com.example.petfinderremake.common.domain.usecase.preferences.put.PutNoti
 import com.example.petfinderremake.common.presentation.manager.permission.PermissionSender
 import com.example.petfinderremake.logging.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import io.reactivex.rxjava3.subjects.PublishSubject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -25,28 +23,26 @@ class NotificationViewModel @Inject constructor(
     private val getNotificationPermanentlyDeniedUseCase: GetNotificationPermanentlyDeniedUseCase,
     private val getAllNotificationsUseCase: GetAllNotificationsUseCase,
 ) : ViewModel(), PermissionSender {
-    override val permissionEvent: Channel<PermissionSender.PermissionEvent> = Channel()
+    override val permissionEventSubject = PublishSubject.create<PermissionSender.PermissionEvent>()
 
     sealed interface NotificationEvent {
         data class NavigateToNotificationDetails(val notificationId: Long) : NotificationEvent
     }
 
-    private var _notificationEvent = Channel<NotificationEvent>()
-    val notificationEvent get() = _notificationEvent.receiveAsFlow()
+    private val notificationEventSubject = PublishSubject.create<NotificationEvent>()
+    val notificationEvent = notificationEventSubject.hide()
 
-    private val notifications = MutableStateFlow(emptyList<Notification>())
-
+    private val notificationsSubject = BehaviorSubject.createDefault(emptyList<Notification>())
     //    Default true because most of the OS versions not require POST_NOTIFICATIONS permission
-    private val notificationsGranted = MutableStateFlow(true)
-    private val notificationsPermanentlyDenied = MutableStateFlow(false)
+    private val notificationsGrantedSubject = BehaviorSubject.createDefault(true)
+    private val notificationsPermanentlyDeniedSubject = BehaviorSubject.createDefault(false)
 
-    private var runPermissionsRationaleJob: Job? = null
-    private var navigateJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
-    val notificationUiState = combine(
-        notificationsGranted,
-        notificationsPermanentlyDenied,
-        notifications
+    val notificationUiState = Observable.combineLatest(
+        notificationsGrantedSubject,
+        notificationsPermanentlyDeniedSubject,
+        notificationsSubject
     ) { notificationsGranted, notificationsPermanentlyDenied, notifications ->
 
         val notificationState = when {
@@ -63,7 +59,6 @@ class NotificationViewModel @Inject constructor(
             )
         }
 
-        Logger.d("log001 notificationState $notificationState")
         notificationState.copy(
             notifications = notifications
         )
@@ -75,58 +70,54 @@ class NotificationViewModel @Inject constructor(
     }
 
     private fun observeNotifications() {
-        viewModelScope.launch {
-            getAllNotificationsUseCase().collectLatest { result ->
-                with(result) {
-                    onSuccess {
-                        notifications.value = it.success
-                    }
+        getAllNotificationsUseCase().subscribeOn(Schedulers.io()).subscribe { result ->
+            with(result) {
+                onSuccess {
+                    notificationsSubject.onNext(it.success)
                 }
             }
-        }
+        }.addTo(subscriptions)
     }
 
     private fun observeNotificationsPermanentlyDenied() {
-        viewModelScope.launch {
-            getNotificationPermanentlyDeniedUseCase()
-                .collectLatest { result ->
-                    with(result) {
-                        onSuccess {
-                            notificationsPermanentlyDenied.value = it.success
-                        }
+        getNotificationPermanentlyDeniedUseCase()
+            .subscribeOn(Schedulers.io())
+            .subscribe { result ->
+                with(result) {
+                    onSuccess {
+                        notificationsPermanentlyDeniedSubject.onNext(it.success)
                     }
                 }
-        }
+            }.addTo(subscriptions)
     }
 
     fun runPermissionRationale(permission: String) {
-        runPermissionsRationaleJob?.cancel()
-        runPermissionsRationaleJob = viewModelScope.launch {
-            permissionEvent.send(PermissionSender.PermissionEvent.ShowPermissionRationale(permission))
-        }
+        permissionEventSubject.onNext(
+            PermissionSender.PermissionEvent.ShowPermissionRationale(
+                permission
+            )
+        )
     }
 
     fun updateActionGranted(isGranted: Boolean) {
-        notificationsGranted.value = isGranted
+        notificationsGrantedSubject.onNext(isGranted)
     }
 
     fun updateNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean) {
-        viewModelScope.launch {
-            putNotificationsPermanentlyDeniedUseCase(isPermanentlyDenied)
-        }
+        putNotificationsPermanentlyDeniedUseCase(isPermanentlyDenied).subscribeOn(Schedulers.io())
+            .subscribe().addTo(subscriptions)
     }
 
     fun navigateToNotificationDetails(notificationId: Long) {
-        navigateJob?.cancel()
-        navigateJob = viewModelScope.launch {
-            _notificationEvent.send(NotificationEvent.NavigateToNotificationDetails(notificationId))
-        }
+        notificationEventSubject.onNext(
+            NotificationEvent.NavigateToNotificationDetails(
+                notificationId
+            )
+        )
     }
 
     override fun onCleared() {
-        super.onCleared()
-        runPermissionsRationaleJob?.cancel()
-        navigateJob?.cancel()
+        subscriptions.dispose()
     }
 
 }
