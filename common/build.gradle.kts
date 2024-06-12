@@ -40,6 +40,7 @@ dependencies{
 
     api(libs.retrofit2.retrofit)
     api(libs.retrofit2.converter.moshi)
+    implementation(libs.retrofit2.rx.java.adapter)
     implementation(libs.okHttp3)
     implementation(libs.okHttp3.loggin.interceptor)
     ksp(libs.moshi)
@@ -48,8 +49,10 @@ dependencies{
     kapt(libs.dagger.hilt.compiler)
 
     implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.rx.java)
 
     api(libs.androidx.room.runtime)
+    api(libs.androidx.room.rx.java)
     ksp(libs.androidx.room.compiler)
 
     api(libs.junit)
@@ -58,6 +61,10 @@ dependencies{
     api(libs.androidx.arch.core)
     api(libs.coroutine.test)
     debugApi(libs.fragment.test)
+
+    api(libs.rx.java)
+    api(libs.rx.kotlin)
+    api(libs.rx.android)
 }
 
 kapt {
