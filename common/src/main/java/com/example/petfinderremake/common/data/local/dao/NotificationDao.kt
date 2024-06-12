@@ -6,27 +6,28 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.example.petfinderremake.common.data.local.model.NotificationEntity
-import kotlinx.coroutines.flow.Flow
+import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Observable
 
 @Dao
 interface NotificationDao {
 
     @Insert
-    suspend fun insert(notificationEntity: NotificationEntity)
+    fun insert(notificationEntity: NotificationEntity): Completable
 
     @Delete
-    suspend fun delete(notificationEntity: NotificationEntity)
+    fun delete(notificationEntity: NotificationEntity) : Completable
 
     @Update
-    suspend fun update(notificationEntity: NotificationEntity)
+    fun update(notificationEntity: NotificationEntity): Completable
 
     @Query("SELECT * FROM notifications")
-    fun getAllNotification(): Flow<List<NotificationEntity>>
+    fun getAllNotification(): Observable<List<NotificationEntity>>
 
     @Query("SELECT * FROM notifications WHERE displayed == 0")
-    fun getNotDisplayedNotifications(): Flow<List<NotificationEntity>>
+    fun getNotDisplayedNotifications(): Observable<List<NotificationEntity>>
 
     @Query("SELECT * FROM notifications WHERE id =:notificationId ")
-    fun getSingleNotification(notificationId: Long): Flow<NotificationEntity>
+    fun getSingleNotification(notificationId: Long): Observable<NotificationEntity>
 
 }
