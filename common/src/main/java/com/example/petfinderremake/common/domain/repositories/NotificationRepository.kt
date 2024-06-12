@@ -1,15 +1,15 @@
 package com.example.petfinderremake.common.domain.repositories
 
 import com.example.petfinderremake.common.domain.model.notification.Notification
-import kotlinx.coroutines.flow.Flow
+import io.reactivex.rxjava3.core.Observable
 
 interface NotificationRepository {
 
-    suspend fun insert(notification: Notification)
-    suspend fun update(notification: Notification)
-    suspend fun delete(notification: Notification)
-    fun getAllNotifications(): Flow<List<Notification>>
-    fun getNotDisplayedNotifications(): Flow<List<Notification>>
-    fun getSingleNotification(id: Long): Flow<Notification>
+    fun insert(notification: Notification)
+    fun update(notification: Notification)
+    fun delete(notification: Notification)
+    fun getAllNotifications(): Observable<List<Notification>>
+    fun getNotDisplayedNotifications(): Observable<List<Notification>>
+    fun getSingleNotification(id: Long): Observable<Notification>
 
 }

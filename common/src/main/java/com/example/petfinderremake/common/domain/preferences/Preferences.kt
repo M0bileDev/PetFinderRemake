@@ -34,18 +34,19 @@
 
 package com.example.petfinderremake.common.domain.preferences
 
-import kotlinx.coroutines.flow.Flow
+import io.reactivex.rxjava3.core.Flowable
+import io.reactivex.rxjava3.core.Single
 
 interface Preferences {
 
-    suspend fun putToken(token: String)
-    suspend fun putTokenExpirationTime(time: Long)
-    suspend fun putTokenType(tokenType: String)
-    suspend fun deleteTokenInfo()
-    suspend fun putNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean)
+    fun putToken(token: String): Single<androidx.datastore.preferences.core.Preferences>
+    fun putTokenExpirationTime(time: Long): Single<androidx.datastore.preferences.core.Preferences>
+    fun putTokenType(tokenType: String): Single<androidx.datastore.preferences.core.Preferences>
+    fun deleteTokenInfo(): Single<androidx.datastore.preferences.core.Preferences>
+    fun putNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean): Single<androidx.datastore.preferences.core.Preferences>
 
-    fun getToken(): Flow<String>
-    fun getTokenExpirationTime(): Flow<Long>
-    fun getTokenType(): Flow<String>
-    fun getNotificationPermanentlyDenied(): Flow<Boolean>
+    fun getToken(): Flowable<String>
+    fun getTokenExpirationTime(): Flowable<Long>
+    fun getTokenType(): Flowable<String>
+    fun getNotificationPermanentlyDenied(): Flowable<Boolean>
 }
