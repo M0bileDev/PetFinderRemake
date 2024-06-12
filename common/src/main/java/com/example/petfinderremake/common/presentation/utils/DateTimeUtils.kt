@@ -34,15 +34,21 @@
 
 package com.example.petfinderremake.common.presentation.utils
 
-import java.lang.Exception
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 
 object DateTimeUtils {
-  fun parse(dateTimeString: String): LocalDateTime = try {
-      LocalDateTime.parse(dateTimeString)
+    fun parse(dateTimeString: String): LocalDateTime = try {
+        LocalDateTime.parse(dateTimeString)
     } catch (e: Exception) {
-      val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
-      LocalDateTime.parse(dateTimeString, dateFormatter)
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
+        LocalDateTime.parse(dateTimeString, dateFormatter)
+    }
+}
+
+data class UserActionInterval(val elapsedTime: Long, val timeUnit: TimeUnit) {
+    companion object {
+        val default = UserActionInterval(300L, TimeUnit.MILLISECONDS)
     }
 }
