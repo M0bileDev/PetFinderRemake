@@ -1,22 +1,18 @@
 package com.example.petfinderremake.features.filter.presentation.screen.select
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.petfinderremake.common.domain.model.AnimalParameters
 import com.example.petfinderremake.common.domain.model.isEmpty
 import com.example.petfinderremake.common.ext.checkIfItemTheSame
 import com.example.petfinderremake.common.ext.checkIfItemsTheSame
+import com.example.petfinderremake.common.ext.getValueOrThrow
 import com.example.petfinderremake.features.filter.presentation.model.adapter.toSelectAdapterModel
 import com.example.petfinderremake.features.filter.presentation.model.navigation.SelectNavArg
 import com.example.petfinderremake.features.filter.presentation.model.navigation.SelectType
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import io.reactivex.rxjava3.subjects.PublishSubject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,51 +24,52 @@ class SelectViewModel @Inject constructor() : ViewModel() {
         data object Idle : UpdateFilterModel
     }
 
-    private var updateFilterJob: Job? = null
-    private var doneJob: Job? = null
-    private var clearJob: Job? = null
-
     sealed interface SelectEvent {
         data class NavigateBackWithResult(val resultNavArg: AnimalParameters) : SelectEvent
     }
 
-    private var _selectEvent = Channel<SelectEvent>()
-    val selectEvent get() = _selectEvent.receiveAsFlow()
+    private val selectEventSubject = PublishSubject.create<SelectEvent>()
+    val selectEvent = selectEventSubject.hide()
 
     private var selectType = SelectType.TYPE
-    private var filter = MutableStateFlow(AnimalParameters.noAnimalParameters)
-    private val searchPhrase = MutableStateFlow("")
-    private val names: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
+    private val filterSubject = BehaviorSubject.createDefault(AnimalParameters.noAnimalParameters)
+    private val searchPhraseSubject = BehaviorSubject.createDefault("")
+    private val namesSubject = BehaviorSubject.createDefault<List<String>>(emptyList())
 
-    private val filteredNames = combine(names, filter) { names, filter ->
-        val filteredNames = with(filter) {
-            if (isEmpty()) {
-                names.map { it to false }
-            } else {
-                when (selectType) {
-                    SelectType.TYPE -> {
-                        type?.let { type ->
-                            names.map { it to it.checkIfItemTheSame(type) }
-                        } ?: names.map { it to false }
-                    }
+    private val filteredNames =
+        Observable.combineLatest(namesSubject, filterSubject) { names, filter ->
+            val filteredNames = with(filter) {
+                if (isEmpty()) {
+                    names.map { it to false }
+                } else {
+                    when (selectType) {
+                        SelectType.TYPE -> {
+                            type?.let { type ->
+                                names.map { it to it.checkIfItemTheSame(type) }
+                            } ?: names.map { it to false }
+                        }
 
-                    SelectType.BREED -> {
-                        breed?.let { breed ->
-                            if (breed.isEmpty()) {
-                                names.map { it to false }
-                            } else {
-                                names.map { it to breed.checkIfItemsTheSame(it) }
-                            }
-                        } ?: names.map { it to false }
+                        SelectType.BREED -> {
+                            breed?.let { breed ->
+                                if (breed.isEmpty()) {
+                                    names.map { it to false }
+                                } else {
+                                    names.map { it to breed.checkIfItemsTheSame(it) }
+                                }
+                            } ?: names.map { it to false }
+                        }
                     }
                 }
             }
+            filteredNames
         }
-        filteredNames
-    }
 
     val selectUiState =
-        combine(searchPhrase, filteredNames, filter) { searchPhrase, filteredNames, filter ->
+        Observable.combineLatest(
+            searchPhraseSubject,
+            filteredNames,
+            filterSubject
+        ) { searchPhrase, filteredNames, filter ->
 
             val search = searchPhrase.lowercase().trim()
             val searchedNames = getSearchedNames(search, filteredNames)
@@ -101,7 +98,7 @@ class SelectViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onSearch(value: String) {
-        searchPhrase.value = value
+        searchPhraseSubject.onNext(value)
     }
 
     fun onSelect(selectedName: String) {
@@ -124,46 +121,48 @@ class SelectViewModel @Inject constructor() : ViewModel() {
         }
 
     private fun selectFilter(name: String) {
-        updateFilterJob?.cancel()
-        updateFilterJob = viewModelScope.launch {
-            val names = names.value
-            val filteredPairNameChecked = filteredNames.first()
 
-            val selectedNames = names.map {
-                it to selectValueLogic(
-                    selectType.isSingleSelect, it, name, filteredPairNameChecked
-                )
-            }
+        val names = namesSubject.getValueOrThrow()
+        val filter = filterSubject.getValueOrThrow()
+        // TODO: Test this solution
+        val filteredPairNameChecked = filteredNames.blockingFirst()
 
-
-            val updatedFilter = when (selectType) {
-                SelectType.TYPE -> {
-                    val type = selectedNames.find { it.second }?.first
-                    filter.value.copy(type = type)
-                }
-
-                SelectType.BREED -> {
-                    val breeds = selectedNames.filter { it.second }.map { it.first }
-                    val filteredBreeds = breeds.ifEmpty { null }
-                    filter.value.copy(breed = filteredBreeds)
-                }
-            }
-            filter.value = updatedFilter
+        val selectedNames = names.map {
+            it to selectValueLogic(
+                selectType.isSingleSelect, it, name, filteredPairNameChecked
+            )
         }
-    }
 
-    private fun clearFilter() {
+
         val updatedFilter = when (selectType) {
             SelectType.TYPE -> {
-                filter.value.copy(type = "")
+                val type = selectedNames.find { it.second }?.first
+                filter.copy(type = type)
             }
 
             SelectType.BREED -> {
-                filter.value.copy(breed = emptyList())
+                val breeds = selectedNames.filter { it.second }.map { it.first }
+                val filteredBreeds = breeds.ifEmpty { null }
+                filter.copy(breed = filteredBreeds)
+            }
+        }
+        filterSubject.onNext(updatedFilter)
+    }
+
+    private fun clearFilter() {
+        val filter = filterSubject.getValueOrThrow()
+
+        val updatedFilter = when (selectType) {
+            SelectType.TYPE -> {
+                filter.copy(type = "")
+            }
+
+            SelectType.BREED -> {
+                filter.copy(breed = emptyList())
             }
         }
 
-        filter.value = updatedFilter
+        filterSubject.onNext(updatedFilter)
     }
 
     /**
@@ -188,29 +187,18 @@ class SelectViewModel @Inject constructor() : ViewModel() {
 
 
     fun onDone() {
-        doneJob?.cancel()
-        doneJob = viewModelScope.launch {
-            val filter = filter.value
-            _selectEvent.send(SelectEvent.NavigateBackWithResult(filter))
-        }
+        val filter = filterSubject.getValueOrThrow()
+        selectEventSubject.onNext(SelectEvent.NavigateBackWithResult(filter))
     }
 
     fun onClear() {
-        clearJob?.cancel()
-        clearJob = viewModelScope.launch {
-            updateFilter(UpdateFilterModel.Clear)
-        }
+        updateFilter(UpdateFilterModel.Clear)
     }
 
     fun setupNavArgs(navArgs: SelectNavArg) {
         selectType = navArgs.selectType
-        names.value = navArgs.names
-        filter.value = navArgs.filter
+        namesSubject.onNext(navArgs.names)
+        filterSubject.onNext(navArgs.filter)
     }
 
-    override fun onCleared() {
-        clearJob?.cancel()
-        doneJob?.cancel()
-        updateFilterJob?.cancel()
-    }
 }

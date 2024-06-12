@@ -12,12 +12,15 @@ import com.example.petfinderremake.common.ext.withLifecycleOwner
 import com.example.petfinderremake.common.presentation.navigation.CommonNavigation
 import com.example.petfinderremake.common.presentation.utils.commonString
 import com.example.petfinderremake.features.filter.databinding.FragmentSelectBinding
-import com.example.petfinderremake.features.filter.presentation.model.navigation.toStringResource
 import com.example.petfinderremake.features.filter.presentation.adapter.SelectAdapter
+import com.example.petfinderremake.features.filter.presentation.model.navigation.toStringResource
 import com.example.petfinderremake.features.filter.presentation.navigation.SelectNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -30,6 +33,7 @@ class SelectFragment : Fragment() {
 
     private var observeEventJob: Job? = null
     private var observeUiStateJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
     @Inject
     lateinit var selectNavigation: SelectNavigation
@@ -93,14 +97,20 @@ class SelectFragment : Fragment() {
         }
     }
 
-    private fun observeUiState() {
-        observeUiStateJob = withLifecycleOwner {
-            viewModel.selectUiState.collectLatest { uiState ->
-                updateRecyclerView(uiState)
-                updateClearButton(uiState)
-                updateToolbar(uiState)
+    private fun observeUiState() = with(viewModel) {
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                selectUiState.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateRecyclerView(uiState)
+                        updateClearButton(uiState)
+                        updateToolbar(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateToolbar(uiState: SelectUiState) = with(uiState) {
@@ -117,23 +127,38 @@ class SelectFragment : Fragment() {
         binding.selectButtonClear.isEnabled = isSelected
     }
 
-    private fun observeSelectEvent() {
-        observeEventJob = withLifecycleOwner {
-            viewModel.selectEvent.collectLatest { event ->
-                when (event) {
-                    is SelectViewModel.SelectEvent.NavigateBackWithResult -> {
-                        selectNavigation.navigateBackWithResult(this, event.resultNavArg)
-                    }
-                }
+    private fun observeSelectEvent() = with(viewModel) {
+        withLifecycleOwner(
+            jobBlock = {
+                observeEventJob = it
+            },
+            disposableBlock = {
+                selectEvent.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            is SelectViewModel.SelectEvent.NavigateBackWithResult -> {
+                                selectNavigation.navigateBackWithResult(
+                                    this@SelectFragment,
+                                    event.resultNavArg
+                                )
+                            }
+                        }
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         observeEventJob?.cancel()
         observeUiStateJob?.cancel()
+        subscriptions.clear()
         binding.selectRecyclerView.adapter = null
         _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }
