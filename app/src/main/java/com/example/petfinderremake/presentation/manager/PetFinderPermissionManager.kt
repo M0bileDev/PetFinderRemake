@@ -19,8 +19,10 @@ import com.example.petfinderremake.common.presentation.manager.permission.getPer
 import com.example.petfinderremake.common.presentation.utils.commonString
 import com.example.petfinderremake.common.presentation.utils.showPermissionDialog
 import com.example.petfinderremake.common.presentation.utils.showPermissionNotGranted
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.Disposable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 class PetFinderPermissionManager @Inject constructor() : PermissionManager {
@@ -100,31 +102,39 @@ class PetFinderPermissionManager @Inject constructor() : PermissionManager {
     override fun setupPermissionsReceiver(
         permissionSender: () -> PermissionSender,
         resources: Resources,
-        lifecycleOwner: LifecycleOwner
-    ): Job = with(lifecycleOwner) {
-        val manager = permissionSender()
-        return withLifecycleOwner {
-            manager.getPermissionEvent().collectLatest { event ->
-                when (event) {
-                    is PermissionSender.PermissionEvent.ShowPermissionRationale -> {
-                        showPermissionDialog(
-                            context = context,
-                            permissionMessage = commonString.permission_notification,
-                            onPositiveButton = {
-                                permissionLauncher.launch(event.permission)
-                            },
-                            onNegativeButton = {
-                                showPermissionNotGranted(
-                                    getPermissionName(
-                                        resources,
-                                        event.permission
-                                    ), view
-                                )
-                            })
+        lifecycleOwner: LifecycleOwner,
+        jobBlock: (Job) -> Unit,
+        onDispose: (Disposable) -> Unit
+    ) = with(lifecycleOwner) {
+        withLifecycleOwner(
+            disposableBlock = {
+                permissionSender().getPermissionEvent()
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            is PermissionSender.PermissionEvent.ShowPermissionRationale -> {
+                                showPermissionDialog(
+                                    context = context,
+                                    permissionMessage = commonString.permission_notification,
+                                    onPositiveButton = {
+                                        permissionLauncher.launch(event.permission)
+                                    },
+                                    onNegativeButton = {
+                                        showPermissionNotGranted(
+                                            getPermissionName(
+                                                resources,
+                                                event.permission
+                                            ), view
+                                        )
+                                    })
+                            }
+                        }
                     }
-                }
-            }
-        }
+            },
+            jobBlock = jobBlock,
+            onDispose = onDispose
+        )
     }
 
     override fun checkPermissions(
