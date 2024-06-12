@@ -53,9 +53,6 @@ import com.example.petfinderremake.common.domain.usecase.preferences.put.PutToke
 import com.example.petfinderremake.common.domain.usecase.preferences.put.PutTokenUseCase
 import com.example.petfinderremake.logging.Logger
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.FormBody
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -81,13 +78,12 @@ class AuthenticationInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         var token = ""
         var tokenExpirationTime: Instant = Instant.now()
-        runBlocking {
-            launch { getTokenUseCase().first().onSuccess { token = it.success } }
-            launch {
-                getTokenExpirationTimeUseCase().first()
-                    .onSuccess { tokenExpirationTime = Instant.ofEpochSecond(it.success) }
-            }
-        }
+        getTokenUseCase()
+            .blockingFirst()
+            .onSuccess { token = it.success }
+        getTokenExpirationTimeUseCase()
+            .blockingFirst()
+            .onSuccess { tokenExpirationTime = Instant.ofEpochSecond(it.success) }
 
         val request = chain.request()
 
@@ -150,7 +146,7 @@ class AuthenticationInterceptor @Inject constructor(
         val response = proceed(request)
 
         if (response.code == UNAUTHORIZED) {
-            runBlocking { deleteTokenInfoUseCase() }
+            deleteTokenInfoUseCase()
         }
 
         return response
@@ -169,13 +165,10 @@ class AuthenticationInterceptor @Inject constructor(
     }
 
     private fun storeNewToken(apiToken: ApiToken) {
-        runBlocking {
-            // TODO: Add logic to handle null type, and results
-            launch { putTokenTypeUseCase(apiToken.tokenType!!) }
-            launch { putTokenExpirationTimeUseCase(apiToken.expiresAt) }
-            launch { putTokenUseCase(apiToken.accessToken!!) }
-        }
-
+        // TODO: Add logic to handle null type, and results
+        putTokenTypeUseCase(apiToken.tokenType!!)
+        putTokenExpirationTimeUseCase(apiToken.expiresAt)
+        putTokenUseCase(apiToken.accessToken!!)
     }
 
 
