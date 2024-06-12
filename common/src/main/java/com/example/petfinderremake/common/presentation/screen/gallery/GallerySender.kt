@@ -2,16 +2,12 @@ package com.example.petfinderremake.common.presentation.screen.gallery
 
 import com.example.petfinderremake.common.domain.model.animal.media.Media
 import com.example.petfinderremake.common.domain.model.animal.media.checkIfMediaExists
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.subjects.PublishSubject
 
 interface GallerySender {
-    val gallerySenderEvent: Channel<SenderEvent>
-    fun getGalleryEvent(): Flow<SenderEvent> = gallerySenderEvent.receiveAsFlow()
+    val gallerySenderSubject: PublishSubject<SenderEvent>
+    fun getGalleryEvent(): Observable<SenderEvent> = gallerySenderSubject.hide()
     fun navigateToGallery(galleryArg: GalleryArg)
 
     sealed interface SenderEvent {
@@ -36,15 +32,15 @@ interface GallerySender {
         }
     }
 
-    fun CoroutineScope.runGalleryAction(media: Media): Job {
+    fun runGalleryAction(media: Media) {
         val mediaExists = media.checkIfMediaExists()
-        return launch {
-            if (mediaExists) {
-                gallerySenderEvent.send(SenderEvent.NavigateToGallery(media))
-            } else {
-                gallerySenderEvent.send(SenderEvent.DisplayNoInfo)
-            }
+
+        if (mediaExists) {
+            gallerySenderSubject.onNext(SenderEvent.NavigateToGallery(media))
+        } else {
+            gallerySenderSubject.onNext(SenderEvent.DisplayNoInfo)
         }
+
     }
 }
 
