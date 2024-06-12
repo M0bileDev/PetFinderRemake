@@ -1,19 +1,17 @@
 package com.example.petfinderremake.features.details.animals.presentation.screen
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.petfinderremake.common.domain.result.onSuccess
+import com.example.petfinderremake.common.ext.getValueOrThrow
 import com.example.petfinderremake.common.presentation.screen.gallery.GallerySender
 import com.example.petfinderremake.common.presentation.screen.gallery.GallerySender.GalleryArg.Companion.runAction
 import com.example.petfinderremake.features.details.animals.domain.GetAnimalUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import io.reactivex.rxjava3.subjects.PublishSubject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -21,47 +19,39 @@ class AnimalDetailsViewModel @Inject constructor(
     private val getAnimalUseCase: GetAnimalUseCase
 ) : ViewModel(), GallerySender {
 
-    override val gallerySenderEvent: Channel<GallerySender.SenderEvent> = Channel()
+    private val subscriptions = CompositeDisposable()
+    override val gallerySenderSubject = PublishSubject.create<GallerySender.SenderEvent>()
 
-    private var gallerySenderJob: Job? = null
-    private var getAnimalJob: Job? = null
-
-    private var _detailsUiState = MutableStateFlow(DetailsUiState.noDetailsUiState)
-    val detailsUiState = _detailsUiState.asStateFlow()
+    private val detailsUiStateSubject = BehaviorSubject.createDefault(DetailsUiState.noDetailsUiState)
+    val detailsUiState = detailsUiStateSubject.hide()
 
     fun setupArgs(idArgs: Long) {
         getAnimal(idArgs)
     }
 
     private fun getAnimal(id: Long) {
-        getAnimalJob?.cancel()
-        getAnimalJob = viewModelScope.launch {
-            getAnimalUseCase(id).collectLatest { result ->
+        getAnimalUseCase(id)
+            .subscribeOn(Schedulers.io())
+            .subscribe { result ->
                 with(result) {
                     onSuccess { result ->
-                        _detailsUiState.update { previousState ->
-                            previousState.copy(
-                                animalWithDetails = result.success
-                            )
-                        }
+                        detailsUiStateSubject.onNext(DetailsUiState(result.success))
                     }
                 }
-            }
-        }
+            }.addTo(subscriptions)
+
     }
 
 
     override fun navigateToGallery(galleryArg: GallerySender.GalleryArg) {
         galleryArg.runAction(actionNoArg = {
-            val animal = detailsUiState.value
+            val animal = detailsUiStateSubject.getValueOrThrow()
             val media = animal.media
-            gallerySenderJob?.cancel()
-            gallerySenderJob = viewModelScope.runGalleryAction(media)
+            runGalleryAction(media)
         })
     }
 
     override fun onCleared() {
-        gallerySenderJob?.cancel()
-        getAnimalJob?.cancel()
+        subscriptions.dispose()
     }
 }

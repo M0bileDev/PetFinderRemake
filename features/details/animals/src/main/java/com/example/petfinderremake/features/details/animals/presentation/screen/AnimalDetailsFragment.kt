@@ -22,8 +22,11 @@ import com.example.petfinderremake.common.presentation.utils.fromPresentationDat
 import com.example.petfinderremake.features.details.animals.R
 import com.example.petfinderremake.features.details.animals.databinding.FragmentAnimalDetailsBinding
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,6 +47,7 @@ class AnimalDetailsFragment : Fragment(), GalleryReceiver {
 
     private var observeUiStateJob: Job? = null
     private var observeGalleryReceiverJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -77,24 +81,33 @@ class AnimalDetailsFragment : Fragment(), GalleryReceiver {
     }
 
     private fun setupGallery() {
-        observeGalleryReceiverJob?.cancel()
-        observeGalleryReceiverJob = setupGalleryReceiver(
+        setupGalleryReceiver(
             { viewModel },
-            { galleryNavigation.navigateToGallery(this, it) }
+            { galleryNavigation.navigateToGallery(this, it) },
+            { observeGalleryReceiverJob = it },
+            { it.addTo(subscriptions) }
         )
     }
 
     private fun observeUiState() = with(viewModel) {
-        observeUiStateJob = withLifecycleOwner {
-            detailsUiState.collectLatest { uiState ->
-                updateDetailsTop(uiState)
-                updateDescription(uiState.descriptionSection)
-                updateDetails(uiState.detailsSection)
-                updateHealthDetails(uiState.healthDetailsSection)
-                updateHabitatAdaptation(uiState.habitatAdaptationSection)
-                setupOpenInPageButton(uiState)
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                detailsUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateDetailsTop(uiState)
+                        updateDescription(uiState.descriptionSection)
+                        updateDetails(uiState.detailsSection)
+                        updateHealthDetails(uiState.healthDetailsSection)
+                        updateHabitatAdaptation(uiState.habitatAdaptationSection)
+                        setupOpenInPageButton(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateHabitatAdaptation(sectionDataList: SectionDataList) =
@@ -160,5 +173,11 @@ class AnimalDetailsFragment : Fragment(), GalleryReceiver {
         super.onDestroyView()
         observeGalleryReceiverJob?.cancel()
         observeUiStateJob?.cancel()
+        subscriptions.clear()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }
