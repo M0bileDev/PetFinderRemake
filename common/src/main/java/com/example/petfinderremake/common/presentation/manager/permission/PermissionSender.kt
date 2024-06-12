@@ -1,16 +1,15 @@
 package com.example.petfinderremake.common.presentation.manager.permission
 
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.subjects.PublishSubject
 
 interface PermissionSender {
 
-    val permissionEvent: Channel<PermissionEvent>
+    val permissionEventSubject: PublishSubject<PermissionEvent>
 
     sealed interface PermissionEvent {
         data class ShowPermissionRationale(val permission: String) : PermissionEvent
     }
 
-    fun getPermissionEvent(): Flow<PermissionEvent> = permissionEvent.receiveAsFlow()
+    fun getPermissionEvent(): Observable<PermissionEvent> = permissionEventSubject.hide()
 }
