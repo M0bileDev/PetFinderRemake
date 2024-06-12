@@ -9,7 +9,7 @@ enum class ArgumentError : Error {
 
 }
 
-suspend fun <T, E : RootError> Result<T, E>.onArgumentError(
+fun <T, E : RootError> Result<T, E>.onArgumentError(
     onArgumentIsEmpty: () -> Unit = {},
     onArgumentIsNegative: () -> Unit = {},
     onArgumentError: () -> Unit = {},

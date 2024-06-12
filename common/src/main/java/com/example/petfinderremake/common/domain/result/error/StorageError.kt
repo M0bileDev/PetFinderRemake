@@ -7,9 +7,9 @@ enum class StorageError : Error {
     NO_DATA_TO_STORE
 }
 
-suspend fun <T, E : RootError> Result<T, E>.onStorageError(
-    onNoDataToStore: suspend (StorageError) -> Unit = {},
-    onStorageError: suspend (StorageError) -> Unit = {},
+fun <T, E : RootError> Result<T, E>.onStorageError(
+    onNoDataToStore: (StorageError) -> Unit = {},
+    onStorageError: (StorageError) -> Unit = {},
 ): Result<T, E> {
 
     if (this !is Result.Error)

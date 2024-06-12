@@ -22,14 +22,14 @@ enum class NetworkError(val code: Int) : Error {
     ) : IllegalStateException(message)
 }
 
-suspend fun <T, E : RootError> Result<T, E>.onNetworkError(
+fun <T, E : RootError> Result<T, E>.onNetworkError(
     onAccessDeniedInvalidCredentials: (NetworkError) -> Unit = {},
     onAccessDeniedInsufficientAccess: (NetworkError) -> Unit = {},
     onNotFound: (NetworkError) -> Unit = {},
     onUnexpectedError: (NetworkError) -> Unit = {},
     onMissingParameters: (NetworkError) -> Unit = {},
     onInvalidParameters: (NetworkError) -> Unit = {},
-    onNetworkError: suspend (NetworkError) -> Unit = {}
+    onNetworkError: (NetworkError) -> Unit = {}
 ): Result<T, E> {
 
     if (this !is Result.Error)
