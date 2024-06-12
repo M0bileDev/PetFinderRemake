@@ -12,8 +12,11 @@ import com.example.petfinderremake.common.presentation.navigation.GalleryNavigat
 import com.example.petfinderremake.features.gallery.databinding.FragmentGalleryBinding
 import com.example.petfinderremake.features.gallery.presentation.adapter.GalleryAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.kotlin.addTo
+import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -26,6 +29,7 @@ class GalleryFragment : Fragment() {
 
     private var observeUiStateJob: Job? = null
     private var observeEventJob: Job? = null
+    private val subscriptions = CompositeDisposable()
 
     @Inject
     lateinit var commonNavigation: CommonNavigation
@@ -57,15 +61,23 @@ class GalleryFragment : Fragment() {
     }
 
     private fun observeGalleryEvent() = with(viewModel) {
-        observeEventJob = withLifecycleOwner {
-            galleryEvent.collectLatest { event ->
-                when (event) {
-                    GalleryViewModel.GalleryEvent.NavigateBack -> {
-                        commonNavigation.navigateBack(this@GalleryFragment)
-                    }
-                }
+        withLifecycleOwner(
+            jobBlock = {
+                observeEventJob = it
+            },
+            disposableBlock = {
+                galleryEvent
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { event ->
+                        when (event) {
+                            GalleryViewModel.GalleryEvent.NavigateBack -> {
+                                commonNavigation.navigateBack(this@GalleryFragment)
+                            }
+                        }
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun setupArgs() = with(viewModel) {
@@ -81,11 +93,19 @@ class GalleryFragment : Fragment() {
     }
 
     private fun observeUiState() = with(viewModel) {
-        observeUiStateJob = withLifecycleOwner {
-            galleryUiState.collectLatest { uiState ->
-                updateRecyclerView(uiState)
+        withLifecycleOwner(
+            jobBlock = {
+                observeUiStateJob = it
+            },
+            disposableBlock = {
+                galleryUiState
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { uiState ->
+                        updateRecyclerView(uiState)
+                    }.addTo(subscriptions)
             }
-        }
+        )
     }
 
     private fun updateRecyclerView(uiState: GalleryUiState) = with(uiState) {
@@ -96,5 +116,12 @@ class GalleryFragment : Fragment() {
         super.onDestroyView()
         observeUiStateJob?.cancel()
         observeEventJob?.cancel()
+        subscriptions.clear()
+        _binding = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        subscriptions.dispose()
     }
 }
