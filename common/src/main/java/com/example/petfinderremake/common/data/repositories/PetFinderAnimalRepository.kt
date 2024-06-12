@@ -13,7 +13,7 @@ import com.example.petfinderremake.common.domain.model.animal.details.AnimalWith
 import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnimals
 import com.example.petfinderremake.common.domain.model.pagination.Pagination
 import com.example.petfinderremake.common.domain.repositories.AnimalRepository
-import kotlinx.coroutines.flow.Flow
+import io.reactivex.rxjava3.core.Observable
 import javax.inject.Inject
 
 class PetFinderAnimalRepository @Inject constructor(
@@ -25,13 +25,13 @@ class PetFinderAnimalRepository @Inject constructor(
     private val apiAnimalBreedsMapper: ApiAnimalBreedsMapper
 ) : AnimalRepository {
 
-    override suspend fun requestAnimalsPage(
+    override fun requestAnimalsPage(
         animalParameters: AnimalParameters,
         pageToLoad: Int,
         pageSize: Int
-    ): PaginatedAnimals {
+    ): Observable<PaginatedAnimals> {
 
-        val (apiAnimals, apiPagination) = with(animalParameters) {
+        return with(animalParameters) {
             petFinderApi.getAnimalsPage(
                 type,
                 breed,
@@ -56,107 +56,117 @@ class PetFinderAnimalRepository @Inject constructor(
                 sort,
                 pageToLoad,
                 pageSize
-            )
+            ).map { apiPaginatedAnimals ->
+                val (apiAnimals, apiPagination) = apiPaginatedAnimals
+                PaginatedAnimals(
+                    apiAnimals?.map { apiAnimalMapper.mapToDomain(it) }.orEmpty(),
+                    apiPaginationMapper.mapToDomain(apiPagination)
+                )
+            }
         }
 
-        return PaginatedAnimals(
-            apiAnimals?.map { apiAnimalMapper.mapToDomain(it) }.orEmpty(),
-            apiPaginationMapper.mapToDomain(apiPagination)
-        )
     }
 
-    override suspend fun requestAnimal(id: Long): AnimalWithDetails {
+    override fun requestAnimal(id: Long): Observable<AnimalWithDetails> {
 
-        val apiAnimal = petFinderApi.getAnimal(id)
-        return apiAnimalMapper.mapToDomain(apiAnimal)
+        return petFinderApi.getAnimal(id)
+            .map { apiAnimal -> apiAnimalMapper.mapToDomain(apiAnimal) }
     }
 
-    override suspend fun requestAnimalTypes(): List<AnimalType> {
+    override
+    fun requestAnimalTypes(): Observable<List<AnimalType>> {
 
-        val apiTypes = petFinderApi.getAnimalTypes()
-        return apiTypes.types?.map { apiTypesMapper.mapToDomain(it) }.orEmpty()
+        return petFinderApi.getAnimalTypes()
+            .map { apiTypes -> apiTypes.types?.map { apiTypesMapper.mapToDomain(it) }.orEmpty() }
     }
 
-    override suspend fun requestAnimalType(type: String): AnimalType {
+    override fun requestAnimalType(type: String): Observable<AnimalType> {
 
-        val apiType = petFinderApi.getAnimalType(type)
-        return apiTypesMapper.mapToDomain(apiType)
+        return petFinderApi.getAnimalType(type)
+            .map { apiType -> apiTypesMapper.mapToDomain(apiType) }
     }
 
-    override suspend fun requestAnimalBreeds(type: String): List<AnimalBreeds> {
+    override
+    fun requestAnimalBreeds(type: String): Observable<List<AnimalBreeds>> {
 
-        val apiAnimalBreeds = petFinderApi.getAnimalBreeds(type)
-        return apiAnimalBreeds.breeds?.map { apiAnimalBreedsMapper.mapToDomain(it) }.orEmpty()
+        return petFinderApi.getAnimalBreeds(type).map { apiAnimalBreeds ->
+            apiAnimalBreeds.breeds?.map {
+                apiAnimalBreedsMapper.mapToDomain(it)
+            }.orEmpty()
+        }
     }
 
-    override suspend fun requestDiscoverPage(): PaginatedAnimals {
-        val (apiAnimals, apiPagination) = petFinderApi.getAnimalsPage(
+    override fun requestDiscoverPage(): Observable<PaginatedAnimals> {
+
+        return petFinderApi.getAnimalsPage(
             pageToLoad = 1,
             pageSize = 20
-        )
-        return PaginatedAnimals(
-            apiAnimals?.map { apiAnimalMapper.mapToDomain(it) }.orEmpty(),
-            apiPaginationMapper.mapToDomain(apiPagination)
-        )
+        ).map { apiPaginatedAnimals ->
+            val (apiAnimals, apiPagination) = apiPaginatedAnimals
+            PaginatedAnimals(
+                apiAnimals?.map { apiAnimalMapper.mapToDomain(it) }.orEmpty(),
+                apiPaginationMapper.mapToDomain(apiPagination)
+            )
+        }
     }
 
-    override suspend fun storeAnimals(animals: List<AnimalWithDetails>) {
+    override fun storeAnimals(animals: List<AnimalWithDetails>) {
         animalStorage.storeAnimals(animals)
     }
 
-    override suspend fun storePagination(pagination: Pagination) {
+    override fun storePagination(pagination: Pagination) {
         animalStorage.storePagination(pagination)
     }
 
-    override suspend fun storeAnimalTypes(types: List<AnimalType>) {
+    override fun storeAnimalTypes(types: List<AnimalType>) {
         animalStorage.storeAnimalTypes(types)
     }
 
-    override suspend fun storeAnimalBreeds(animalBreeds: List<AnimalBreeds>) {
+    override fun storeAnimalBreeds(animalBreeds: List<AnimalBreeds>) {
         animalStorage.storeAnimalBreeds(animalBreeds)
     }
 
-    override suspend fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals) {
+    override fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals) {
         animalStorage.storeDiscoverPaginatedAnimals(paginatedAnimals)
     }
 
-    override fun getAnimals(): Flow<List<AnimalWithDetails>> {
+    override fun getAnimals(): Observable<List<AnimalWithDetails>> {
         return animalStorage.getAnimals()
     }
 
-    override fun getPagination(): Flow<Pagination> {
+    override fun getPagination(): Observable<Pagination> {
         return animalStorage.getPagination()
     }
 
-    override fun getAnimal(id: Long): Flow<AnimalWithDetails> {
+    override fun getAnimal(id: Long): Observable<AnimalWithDetails> {
         return animalStorage.getAnimal(id)
     }
 
-    override fun getAnimalTypes(): Flow<List<AnimalType>> {
+    override fun getAnimalTypes(): Observable<List<AnimalType>> {
         return animalStorage.getAnimalTypes()
     }
 
-    override fun getAnimalType(type: String): Flow<AnimalType> {
+    override fun getAnimalType(type: String): Observable<AnimalType> {
         return animalStorage.getAnimalType(type)
     }
 
-    override fun getAnimalBreeds(): Flow<List<AnimalBreeds>> {
+    override fun getAnimalBreeds(): Observable<List<AnimalBreeds>> {
         return animalStorage.getAnimalBreeds()
     }
 
-    override fun getDiscoverPaginatedAnimals(): Flow<PaginatedAnimals> {
+    override fun getDiscoverPaginatedAnimals(): Observable<PaginatedAnimals> {
         return animalStorage.getDiscoverPaginatedAnimals()
     }
 
-    override suspend fun deleteAnimals() {
+    override fun deleteAnimals() {
         animalStorage.deleteAnimals()
     }
 
-    override suspend fun deleteBreeds() {
+    override fun deleteBreeds() {
         animalStorage.deleteBreeds()
     }
 
-    override suspend fun deletePagination() {
+    override fun deletePagination() {
         animalStorage.deletePagination()
     }
 
