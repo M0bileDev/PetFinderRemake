@@ -41,6 +41,8 @@ import com.example.petfinderremake.common.data.network.api.model.ApiAnimalBreeds
 import com.example.petfinderremake.common.data.network.api.model.ApiAnimalTypes
 import com.example.petfinderremake.common.data.network.api.model.ApiPaginatedAnimals
 import com.example.petfinderremake.common.data.network.api.model.ApiType
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -48,7 +50,7 @@ import retrofit2.http.Query
 interface PetFinderApi {
 
     @GET(ApiConstants.ANIMALS_ENDPOINT)
-    suspend fun getAnimalsPage(
+    fun getAnimalsPage(
         @Query(ApiParameters.TYPE) type: String? = null,
         @Query(ApiParameters.BREED) breed: List<String>? = null,
         @Query(ApiParameters.SIZE) size: List<String>? = null,
@@ -72,17 +74,17 @@ interface PetFinderApi {
         @Query(ApiParameters.SORT) sort: String? = null,
         @Query(ApiParameters.PAGE) pageToLoad: Int,
         @Query(ApiParameters.LIMIT) pageSize: Int
-    ): ApiPaginatedAnimals
+    ): Observable<ApiPaginatedAnimals>
 
     @GET(ApiConstants.ANIMAL_ENDPOINT)
-    suspend fun getAnimal(@Path(ID_PATH) id: Long): ApiAnimal
+    fun getAnimal(@Path(ID_PATH) id: Long): Observable<ApiAnimal>
 
     @GET(ApiConstants.TYPES_ENDPOINT)
-    suspend fun getAnimalTypes(): ApiAnimalTypes
+    fun getAnimalTypes(): Observable<ApiAnimalTypes>
 
     @GET(ApiConstants.TYPE_ENDPOINT)
-    suspend fun getAnimalType(@Path(TYPE_PATH) type: String): ApiType
+    fun getAnimalType(@Path(TYPE_PATH) type: String): Observable<ApiType>
 
     @GET(ApiConstants.BREEDS_ENDPOINT)
-    suspend fun getAnimalBreeds(@Path(TYPE_PATH) type: String): ApiAnimalBreeds
+    fun getAnimalBreeds(@Path(TYPE_PATH) type: String): Observable<ApiAnimalBreeds>
 }
