@@ -16,10 +16,8 @@ import com.example.petfinderremake.features.filter.presentation.adapter.SelectAd
 import com.example.petfinderremake.features.filter.presentation.model.navigation.toStringResource
 import com.example.petfinderremake.features.filter.presentation.navigation.SelectNavigation
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -103,7 +101,7 @@ class SelectFragment : Fragment() {
                 observeUiStateJob = it
             },
             disposableBlock = {
-                selectUiState.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+                selectUiState
                     .subscribe { uiState ->
                         updateRecyclerView(uiState)
                         updateClearButton(uiState)
@@ -133,7 +131,7 @@ class SelectFragment : Fragment() {
                 observeEventJob = it
             },
             disposableBlock = {
-                selectEvent.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+                selectEvent
                     .subscribe { event ->
                         when (event) {
                             is SelectViewModel.SelectEvent.NavigateBackWithResult -> {

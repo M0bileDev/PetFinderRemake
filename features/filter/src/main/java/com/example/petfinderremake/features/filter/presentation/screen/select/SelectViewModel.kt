@@ -10,7 +10,9 @@ import com.example.petfinderremake.features.filter.presentation.model.adapter.to
 import com.example.petfinderremake.features.filter.presentation.model.navigation.SelectNavArg
 import com.example.petfinderremake.features.filter.presentation.model.navigation.SelectType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import io.reactivex.rxjava3.subjects.BehaviorSubject
 import io.reactivex.rxjava3.subjects.PublishSubject
 import javax.inject.Inject
@@ -29,7 +31,10 @@ class SelectViewModel @Inject constructor() : ViewModel() {
     }
 
     private val selectEventSubject = PublishSubject.create<SelectEvent>()
-    val selectEvent = selectEventSubject.hide()
+    val selectEvent = selectEventSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     private var selectType = SelectType.TYPE
     private val filterSubject = BehaviorSubject.createDefault(AnimalParameters.noAnimalParameters)
@@ -84,7 +89,7 @@ class SelectViewModel @Inject constructor() : ViewModel() {
                 selectType = selectType,
                 isSelected = isSelected
             )
-        }
+        }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     private fun getSearchedNames(
         searchPhraseFiltered: String,
