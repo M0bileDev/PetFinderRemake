@@ -2,13 +2,13 @@ package com.example.petfinderremake.common.domain.usecase.animal.get
 
 import com.example.petfinderremake.AnimalRepositoryTest
 import com.example.petfinderremake.common.domain.model.animal.AnimalType
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.example.petfinderremake.common.domain.result.RootError
 import com.example.petfinderremake.common.domain.result.error.ArgumentError
 import com.example.petfinderremake.common.domain.result.onError
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -23,91 +23,82 @@ class GetAnimalTypeUseCaseTest : AnimalRepositoryTest() {
     @Before
     fun setup() {
         getAnimalTypeUseCase = GetAnimalTypeUseCase(animalRepository)
-
-        runBlocking {
-            animalRepository.storeAnimalTypes(types)
-        }
+        animalRepository.storeAnimalTypes(types)
     }
 
     @Test
     fun `when get type, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<AnimalType, NotYetDefinedError>>()
+        val result = getAnimalTypeUseCase(type)
+        result.subscribe(testObserver)
 
-            //when
-            val result = getAnimalTypeUseCase(type).first()
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when get type, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<AnimalType, NotYetDefinedError>>()
+        val result = getAnimalTypeUseCase(type)
+        result.subscribe(testObserver)
 
-            //when
-            val result = getAnimalTypeUseCase(type).first()
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `when get type with previously set value, then result of type Result Success is the same value`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<AnimalType, NotYetDefinedError>>()
+        val result = getAnimalTypeUseCase(type)
+        result.subscribe(testObserver)
 
-            //when
-            val result = getAnimalTypeUseCase(type).first()
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(animalType))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(animalType))
     }
 
     @Test
     fun `when get empty type with previously set value, then result of use case is  instance of Result Error `() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<AnimalType, NotYetDefinedError>>()
+        val result = getAnimalTypeUseCase(emptyType)
+        result.subscribe(testObserver)
 
-            //when
-            val result = getAnimalTypeUseCase(emptyType).first()
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Error::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Error::class.java)
     }
 
     @Test
     fun `when get empty type with previously set value, then result of use case is instance of Error ArgumentError`() {
-        runBlocking {
+        var error: RootError? = null
 
-            var error: RootError? = null
+        //when
+        val testObserver = TestObserver<Result<AnimalType, NotYetDefinedError>>()
+        val result = getAnimalTypeUseCase(emptyType)
+        result.subscribe(testObserver)
 
-            //when
-            val result = getAnimalTypeUseCase(emptyType).first()
-            result.onError { error = it.error }
-
-            //then
-            Truth.assertThat(error).isInstanceOf(ArgumentError::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        sut.onError { error = it.error }
+        Truth.assertThat(error).isInstanceOf(ArgumentError::class.java)
     }
 
     @Test
     fun `when get empty type with previously set value, then result of use case is Error ArgumentError ARGUMENT_IS_EMPTY`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<AnimalType, NotYetDefinedError>>()
+        val result = getAnimalTypeUseCase(emptyType)
+        result.subscribe(testObserver)
 
-            //when
-            val result = getAnimalTypeUseCase(emptyType).first()
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(ArgumentError.ARGUMENT_IS_EMPTY))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut)
+            .isEqualTo(Result.Error(ArgumentError.ARGUMENT_IS_EMPTY))
     }
 }

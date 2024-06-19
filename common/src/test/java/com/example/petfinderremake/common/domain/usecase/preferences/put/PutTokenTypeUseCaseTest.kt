@@ -1,71 +1,72 @@
 package com.example.petfinderremake.common.domain.usecase.preferences.put
 
 import com.example.petfinderremake.PreferencesTest
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import org.junit.Assert.*
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
-class PutTokenTypeUseCaseTest : PreferencesTest(){
-    
+class PutTokenTypeUseCaseTest : PreferencesTest() {
+
     private val type = "type"
     private lateinit var putTokenTypeUseCase: PutTokenTypeUseCase
-    
-    @Before
-    fun setup(){
 
+    @Before
+    fun setup() {
         putTokenTypeUseCase = PutTokenTypeUseCase(preferences)
-        
-        runBlocking { 
-            preferences.deleteTokenInfo()
-        }
+        preferences.deleteTokenInfo()
     }
 
     @Test
-    fun `when put token type, then result of use case is instance of Result`() =
-        runBlocking {
+    fun `when put token type, then result of use case is instance of Result`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putTokenTypeUseCase(type)
+        result.subscribe(testObserver)
 
-            //when
-            val result = putTokenTypeUseCase(type)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-        }
-
-    @Test
-    fun `when put token type, then result of use case is instance of Result Success`() =
-        runBlocking {
-
-            //when
-            val result = putTokenTypeUseCase(type)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
+    }
 
     @Test
-    fun `when put token type value, then result of use case is Result Success Unit`() =
-        runBlocking {
+    fun `when put token type, then result of use case is instance of Result Success`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putTokenTypeUseCase(type)
+        result.subscribe(testObserver)
 
-            //when
-            val result = putTokenTypeUseCase(type)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
+    }
 
     @Test
-    fun `when put token type TYPE, then result is TYPE`() =
-        runBlocking {
+    fun `when put token type value, then result of use case is Result Success Unit`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putTokenTypeUseCase(type)
+        result.subscribe(testObserver)
 
-            //when
-            putTokenTypeUseCase(type)
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
+    }
 
-            //then
-            val result = preferences.getTokenType().first()
-            Truth.assertThat(result).isEqualTo(type)
-        }
+    @Test
+    fun `when put token type TYPE, then result is TYPE`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        putTokenTypeUseCase(type).subscribe(testObserver)
+
+        //then
+        val testObserver2 = TestObserver<String>()
+        val result = preferences.getTokenType().toObservable()
+        result.subscribe(testObserver2)
+
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isEqualTo(type)
+    }
 }

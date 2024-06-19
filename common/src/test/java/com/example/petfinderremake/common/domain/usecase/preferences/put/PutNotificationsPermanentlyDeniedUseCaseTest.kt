@@ -1,10 +1,10 @@
 package com.example.petfinderremake.common.domain.usecase.preferences.put
 
 import com.example.petfinderremake.PreferencesTest
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -17,54 +17,59 @@ class PutNotificationsPermanentlyDeniedUseCaseTest : PreferencesTest() {
     fun setup() {
         putNotificationsPermanentlyDeniedUseCase =
             PutNotificationsPermanentlyDeniedUseCase(preferences)
-
-        runBlocking {
-            preferences.putNotificationsPermanentlyDenied(false)
-        }
+        preferences.putNotificationsPermanentlyDenied(false)
     }
 
     @Test
-    fun `when put notification permanently denied, then result of use case is instance of Result`() =
-        runBlocking {
+    fun `when put notification permanently denied, then result of use case is instance of Result`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
+        result.subscribe(testObserver)
 
-            //when
-            val result = putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-        }
-
-    @Test
-    fun `when put notification permanently denied, then result of use case is instance of Result Success`() =
-        runBlocking {
-
-            //when
-            val result = putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
+    }
 
     @Test
-    fun `when put notification permanently denied value, then result of use case is Result Success Unit`() =
-        runBlocking {
+    fun `when put notification permanently denied, then result of use case is instance of Result Success`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
+        result.subscribe(testObserver)
 
-            //when
-            val result = putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
+    }
 
     @Test
-    fun `when put notification permanently denied true, then result true`() =
-        runBlocking {
+    fun `when put notification permanently denied value, then result of use case is Result Success Unit`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
+        result.subscribe(testObserver)
 
-            //when
-            putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied)
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
+    }
 
-            //then
-            val result = preferences.getNotificationPermanentlyDenied().first()
-            Truth.assertThat(result).isTrue()
-        }
+    @Test
+    fun `when put notification permanently denied true, then result true`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        putNotificationsPermanentlyDeniedUseCase(notificationPermanentlyDenied).subscribe(
+            testObserver
+        )
+
+        //then
+        val testObserver2 = TestObserver<Boolean>()
+        val result = preferences.getNotificationPermanentlyDenied().toObservable()
+        result.subscribe(testObserver2)
+
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isTrue()
+    }
 }

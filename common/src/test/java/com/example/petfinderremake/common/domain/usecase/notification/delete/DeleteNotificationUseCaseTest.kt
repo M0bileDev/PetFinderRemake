@@ -1,10 +1,11 @@
 package com.example.petfinderremake.common.domain.usecase.notification.delete
 
 import com.example.petfinderremake.NotificationRepositoryTest
+import com.example.petfinderremake.common.domain.model.notification.Notification
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -15,63 +16,58 @@ class DeleteNotificationUseCaseTest : NotificationRepositoryTest() {
     @Before
     fun setup() {
         deleteNotificationUseCase = DeleteNotificationUseCase(notificationRepository)
-
-        runBlocking {
-            notificationRepository.insert(notification)
-        }
+        notificationRepository.insert(notification)
     }
 
     @Test
     fun `when delete notification, then notification is not present`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        deleteNotificationUseCase(notification).subscribe(testObserver)
 
-            //when
-            deleteNotificationUseCase(notification)
+        //then
+        val testObserver2 = TestObserver<List<Notification>>()
+        val result = notificationRepository.getAllNotifications()
+        result.subscribe(testObserver2)
 
-            //then
-            val notifications = notificationRepository.getAllNotifications().first()
-            Truth.assertThat(notifications).isEmpty()
-
-        }
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isEmpty()
     }
 
     @Test
     fun `when delete notification, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteNotificationUseCase(notification)
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteNotificationUseCase(notification)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when delete notification, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteNotificationUseCase(notification)
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteNotificationUseCase(notification)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `when delete notification, then result of type Result Success is Unit`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteNotificationUseCase(notification)
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteNotificationUseCase(notification)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
     }
 
 

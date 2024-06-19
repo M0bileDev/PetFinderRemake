@@ -1,10 +1,11 @@
 package com.example.petfinderremake.common.domain.usecase.notification.update
 
 import com.example.petfinderremake.NotificationRepositoryTest
+import com.example.petfinderremake.common.domain.model.notification.Notification
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -16,49 +17,45 @@ class UpdateNotificationUseCaseTest : NotificationRepositoryTest() {
     @Before
     fun setup() {
         updateNotificationUseCase = UpdateNotificationUseCase(notificationRepository)
-
-        runBlocking {
-            notificationRepository.insert(notification)
-        }
+        notificationRepository.insert(notification)
     }
 
     @Test
     fun `when update notification, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = updateNotificationUseCase(updatedNotification)
+        result.subscribe(testObserver)
 
-            //when
-            val result = updateNotificationUseCase(updatedNotification)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when update notification, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = updateNotificationUseCase(updatedNotification)
+        result.subscribe(testObserver)
 
-            //when
-            val result = updateNotificationUseCase(updatedNotification)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `when update notification, then updated value is present`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        updateNotificationUseCase(updatedNotification).subscribe(testObserver)
 
-            //when
-            updateNotificationUseCase(updatedNotification)
+        //then
+        val testObserver2 = TestObserver<List<Notification>>()
+        val result = notificationRepository.getAllNotifications()
+        result.subscribe(testObserver2)
 
-            //then
-            val result = notificationRepository.getAllNotifications().first().first()
-            Truth.assertThat(result).isEqualTo(updatedNotification)
-
-        }
+        val sut = testObserver2.values().first().first()
+        Truth.assertThat(sut).isEqualTo(updatedNotification)
     }
 }

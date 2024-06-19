@@ -1,10 +1,10 @@
 package com.example.petfinderremake.common.domain.usecase.preferences.put
 
 import com.example.petfinderremake.PreferencesTest
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -16,55 +16,58 @@ class PutTokenExpirationTimeUseCaseTest : PreferencesTest() {
     @Before
     fun setup() {
         putTokenExpirationTimeUseCase = PutTokenExpirationTimeUseCase(preferences)
-
-        runBlocking {
-            preferences.deleteTokenInfo()
-        }
+        preferences.deleteTokenInfo()
     }
 
     @Test
-    fun `when put token expiration time, then result of use case is instance of Result`() =
-        runBlocking {
+    fun `when put token expiration time, then result of use case is instance of Result`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putTokenExpirationTimeUseCase(expirationTime)
+        result.subscribe(testObserver)
 
-            //when
-            val result = putTokenExpirationTimeUseCase(expirationTime)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-        }
-
-    @Test
-    fun `when put token expiration time, then result of use case is instance of Result Success`() =
-        runBlocking {
-
-            //when
-            val result = putTokenExpirationTimeUseCase(expirationTime)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
+    }
 
     @Test
-    fun `when put token expiration time value, then result of use case is Result Success Unit`() =
-        runBlocking {
+    fun `when put token expiration time, then result of use case is instance of Result Success`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putTokenExpirationTimeUseCase(expirationTime)
+        result.subscribe(testObserver)
 
-            //when
-            val result = putTokenExpirationTimeUseCase(expirationTime)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
+    }
 
     @Test
-    fun `when put token expiration time 1L, then result is 1L`() =
-        runBlocking {
+    fun `when put token expiration time value, then result of use case is Result Success Unit`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = putTokenExpirationTimeUseCase(expirationTime)
+        result.subscribe(testObserver)
 
-            //when
-            putTokenExpirationTimeUseCase(expirationTime)
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
+    }
 
-            //then
-            val result = preferences.getTokenExpirationTime().first()
-            Truth.assertThat(result).isEqualTo(expirationTime)
-        }
+    @Test
+    fun `when put token expiration time 1L, then result is 1L`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        putTokenExpirationTimeUseCase(expirationTime).subscribe(testObserver)
+
+        //then
+        val testObserver2 = TestObserver<Long>()
+        val result = preferences.getTokenExpirationTime().toObservable()
+        result.subscribe(testObserver2)
+
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isEqualTo(expirationTime)
+    }
 
 }

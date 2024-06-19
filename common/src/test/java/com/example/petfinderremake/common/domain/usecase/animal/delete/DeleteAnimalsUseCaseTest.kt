@@ -2,10 +2,10 @@ package com.example.petfinderremake.common.domain.usecase.animal.delete
 
 import com.example.petfinderremake.AnimalRepositoryTest
 import com.example.petfinderremake.common.domain.model.animal.details.AnimalWithDetails
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -18,62 +18,58 @@ class DeleteAnimalsUseCaseTest : AnimalRepositoryTest() {
     @Before
     fun setup() {
         deleteAnimalsUseCase = DeleteAnimalsUseCase(animalRepository)
-
-        runBlocking {
-            animalRepository.storeAnimals(animalsList)
-        }
+        animalRepository.storeAnimals(animalsList)
     }
 
     @Test
     fun `when delete animals, then stored animals list is empty`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        deleteAnimalsUseCase().subscribe(testObserver)
 
-            //when
-            deleteAnimalsUseCase()
+        //then
+        val testObserver2 = TestObserver<List<AnimalWithDetails>>()
+        val storedAnimals = animalRepository.getAnimals()
+        storedAnimals.subscribe(testObserver2)
 
-            //then
-            val storedAnimals = animalRepository.getAnimals().first()
-            Truth.assertThat(storedAnimals).isEmpty()
-        }
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isEmpty()
     }
 
     @Test
     fun `when delete animals, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteAnimalsUseCase()
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteAnimalsUseCase()
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when delete animals, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteAnimalsUseCase()
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteAnimalsUseCase()
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `when delete animals, then result of type Result Success is Unit`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteAnimalsUseCase()
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteAnimalsUseCase()
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
     }
 
 

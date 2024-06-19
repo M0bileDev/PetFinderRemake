@@ -1,11 +1,10 @@
 package com.example.petfinderremake.common.domain.usecase.preferences.delete
 
 import com.example.petfinderremake.PreferencesTest
+import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 
@@ -20,78 +19,98 @@ class DeleteTokenInfoUseCaseTest : PreferencesTest() {
     @Before
     fun setup() {
         deleteTokenInfoUseCase = DeleteTokenInfoUseCase(preferences)
-
-        runBlocking {
-            with(preferences) {
-                launch {
-                    putToken(token)
-                }
-                launch {
-                    putTokenType(tokenType)
-                }
-                launch {
-                    putTokenExpirationTime(tokenExpirationTime)
-                }
-            }
-
+        with(preferences) {
+            putToken(token)
+            putTokenType(tokenType)
+            putTokenExpirationTime(tokenExpirationTime)
         }
     }
 
     @Test
-    fun `when delete token info, then token info (token, type and expiration time) is default`() {
-        runBlocking {
+    fun `when delete token info, then token type is empty`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        deleteTokenInfoUseCase().subscribe(testObserver)
 
-            //when
-            deleteTokenInfoUseCase()
+        //then
+        val testObserver2 = TestObserver<String>()
+        val result = preferences.getTokenType().toObservable()
+        result.subscribe(testObserver2)
 
-            //then
-            val type = preferences.getTokenType().first()
-            val token = preferences.getToken().first()
-            val tokenExpirationTime = preferences.getTokenExpirationTime().first()
+        val sut = testObserver2.values().first()
+        assertThat(sut).isEmpty()
+    }
 
-            assertThat(type).isEmpty()
-            assertThat(token).isEmpty()
-            assertThat(tokenExpirationTime).isEqualTo(-1L)
-        }
+    @Test
+    fun `when delete token info, then token is empty`() {
+
+
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        deleteTokenInfoUseCase().subscribe(testObserver)
+
+        //then
+        val testObserver2 = TestObserver<String>()
+        val result = preferences.getToken().toObservable()
+        result.subscribe(testObserver2)
+
+        val sut = testObserver2.values().first()
+        assertThat(sut).isEmpty()
+
+
+    }
+
+    @Test
+    fun `when delete token info, then expiration time is -1L`() {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        deleteTokenInfoUseCase().subscribe(testObserver)
+
+        //then
+        val testObserver2 = TestObserver<Long>()
+        val result = preferences.getTokenExpirationTime().toObservable()
+        result.subscribe(testObserver2)
+
+        val sut = testObserver2.values().first()
+        assertThat(sut).isEqualTo(-1L)
     }
 
     @Test
     fun `when delete token info, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteTokenInfoUseCase()
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteTokenInfoUseCase()
-
-            //then
-            assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when delete token info, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteTokenInfoUseCase()
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteTokenInfoUseCase()
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isInstanceOf(Result.Success::class.java)
 
-            //then
-            assertThat(result).isInstanceOf(Result.Success::class.java)
 
-        }
     }
 
     @Test
     fun `when delete token info, then result of type Result Success is Unit`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, NotYetDefinedError>>()
+        val result = deleteTokenInfoUseCase()
+        result.subscribe(testObserver)
 
-            //when
-            val result = deleteTokenInfoUseCase()
-
-            //then
-            assertThat(result).isEqualTo(Result.Success(Unit))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isEqualTo(Result.Success(Unit))
     }
 
 }

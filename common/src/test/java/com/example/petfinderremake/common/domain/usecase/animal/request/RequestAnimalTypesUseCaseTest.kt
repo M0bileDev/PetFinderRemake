@@ -9,14 +9,13 @@ import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.domain.result.error.StorageError
 import com.example.petfinderremake.common.domain.result.onError
 import com.google.common.truth.Truth
-import io.mockk.coEvery
-import io.mockk.coVerifyOrder
-import io.mockk.coVerifySequence
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit4.MockKRule
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.mockk.verifyOrder
+import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -53,288 +52,296 @@ class RequestAnimalTypesUseCaseTest : AnimalRepositoryTest() {
 
     @Test
     fun `when request animal types, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = requestAnimalTypesUseCase(onLoading)
+        result.subscribe(testObserver)
 
-            //when
-            val result = requestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when request animal types without any exceptions, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = requestAnimalTypesUseCase(onLoading)
+        result.subscribe(testObserver)
 
-            //when
-            val result = requestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `when request animal types without any exceptions, then result of type Result Success is Unit`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = requestAnimalTypesUseCase(onLoading)
+        result.subscribe(testObserver)
 
-            //when
-            val result = requestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
     }
 
     @Test
     fun `when request animal types with network exceptions, then result of use case is instance of Result Error type`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Error::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Error::class.java)
     }
 
     @Test
     fun `when request animal types with network exceptions, then result of Error is type of NetworkError `() {
-        runBlocking {
+        var sut: RootError? = null
 
-            var error: RootError? = null
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-            result.onError { error = it.error }
 
-            //then
-            Truth.assertThat(error).isInstanceOf(NetworkError::class.java)
-        }
+        //then
+        testObserver.values().first().onError { sut = it.error }
+        Truth.assertThat(sut).isInstanceOf(NetworkError::class.java)
     }
 
     @Test
     fun `when request animal types with network exceptions, then onLoading returns false `() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            mockRequestAnimalTypesUseCase(mockOnLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //then
-            coVerifySequence {
-                mockOnLoading(true)
-                mockOnLoading(false)
-            }
+        //then
+        verifyOrder {
+            mockOnLoading(true)
+            mockOnLoading(false)
         }
     }
 
     @Test
     fun `when request animal types with ACCESS_DENIED_INVALID_CREDENTIALS exceptions, then result of use case is equal to ACCESS_DENIED_INVALID_CREDENTIALS`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS))
     }
 
     @Test
     fun `when request animal types with ACCESS_DENIED_INSUFFICIENT_ACCESS exceptions, then result of use case is equal to ACCESS_DENIED_INSUFFICIENT_ACCESS`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS))
     }
 
     @Test
     fun `when request animal types with NOT_FOUND exceptions, then result of use case is equal to NOT_FOUND`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.NOT_FOUND.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.NOT_FOUND.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.NOT_FOUND))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.NOT_FOUND))
     }
 
     @Test
     fun `when request animal types with UNEXPECTED_ERROR exceptions, then result of use case is equal to UNEXPECTED_ERROR`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.UNEXPECTED_ERROR.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.UNEXPECTED_ERROR.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.UNEXPECTED_ERROR))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.UNEXPECTED_ERROR))
     }
 
     @Test
     fun `when request animal types with MISSING_PARAMETERS exceptions, then result of use case is equal to MISSING_PARAMETERS`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.MISSING_PARAMETERS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.MISSING_PARAMETERS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.MISSING_PARAMETERS))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.MISSING_PARAMETERS))
     }
 
     @Test
     fun `when request animal types with unsupported exceptions, then thrown exception is instance of NetworkErrorTypeException`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(0)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            var handledException: Exception? = null
 
-            //when
-            try {
-                every { httpException.code() }.returns(0)
-                coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-                mockRequestAnimalTypesUseCase(onLoading)
-            } catch (e: Exception) {
-                handledException = e
-            }
-
-            //then
-            Truth.assertThat(handledException)
-                .isInstanceOf(NetworkError.NetworkErrorTypeException::class.java)
-
-        }
+        //then
+        testObserver
+            .assertNoValues()
+            .assertNotComplete()
+            .onError(
+                NetworkError.NetworkErrorTypeException()
+            )
     }
 
     @Test
     fun `when request animal types with storage exceptions, then result of use case is instance of Result Error type`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(Observable.just(emptyList()))
 
-            //when
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.returns(emptyList())
-            val result = mockRequestAnimalTypesUseCase(onLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Error::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Error::class.java)
     }
 
     @Test
     fun `when request animal types with storage exceptions, then result of Error is type of StorageError`() {
-        runBlocking {
+        var sut: RootError? = null
 
-            var error: RootError? = null
+        //when
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(Observable.just(emptyList()))
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.returns(emptyList())
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-            result.onError { error = it.error }
-
-            //then
-            Truth.assertThat(error).isInstanceOf(StorageError::class.java)
-
-        }
+        //then
+        testObserver.values().first().onError { sut = it.error }
+        Truth.assertThat(sut).isInstanceOf(StorageError::class.java)
     }
 
     @Test
     fun `when request animal types with storage exceptions, then StorageError is NO_DATA_TO_STORE`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(Observable.just(emptyList()))
 
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestAnimalTypesUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.returns(emptyList())
-            val result = mockRequestAnimalTypesUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Error(StorageError.NO_DATA_TO_STORE))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Error(StorageError.NO_DATA_TO_STORE))
     }
 
     @Test
     fun `when request animal types with storage exceptions, then onLoading returns false`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(Observable.just(emptyList()))
 
-            //when
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.returns(emptyList())
-            mockRequestAnimalTypesUseCase(mockOnLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        mockRequestAnimalTypesUseCase(mockOnLoading).subscribe(testObserver)
 
-
-            //then
-            coVerifySequence {
-                mockOnLoading(true)
-                mockOnLoading(false)
-            }
-
+        //then
+        verifyOrder {
+            mockOnLoading(true)
+            mockOnLoading(false)
         }
     }
 
     @Test
     fun `when request animal types without  exceptions, then store animals and loading are executed in order`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.storeAnimalTypes(animalTypes) }.returns(Completable.complete())
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(Observable.just(animalTypes))
 
-            //when
-            coEvery { mockAnimalRepository.storeAnimalTypes(animalTypes) }.returns(Unit)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.returns(animalTypes)
-            mockRequestAnimalTypesUseCase(mockOnLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        mockRequestAnimalTypesUseCase(mockOnLoading).subscribe(testObserver)
 
-
-            //then
-            coVerifyOrder {
-                mockAnimalRepository.storeAnimalTypes(animalTypes)
-                mockOnLoading(false)
-            }
-
+        //then
+        verifyOrder {
+            mockAnimalRepository.storeAnimalTypes(animalTypes)
+            mockOnLoading(false)
         }
     }
 
     @Test
     fun `when request animal types, then types are stored`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        requestAnimalTypesUseCase(onLoading).subscribe(testObserver)
 
-            //when
-            requestAnimalTypesUseCase(onLoading)
+        //then
+        val testObserver2 = TestObserver<List<AnimalType>>()
+        val result = animalRepository.getAnimalTypes()
+        result.subscribe(testObserver2)
 
-            //then
-            val result = animalRepository.getAnimalTypes().first()
-            Truth.assertThat(result).isNotEmpty()
-        }
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isNotEmpty()
     }
 
 }
