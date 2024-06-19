@@ -46,8 +46,6 @@ class MainActivity : AppCompatActivity() {
         withLifecycleOwner(
             disposableBlock = {
                 mainActivityUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { uiState ->
                         updateFilterMenuBadge(uiState)
                     }.addTo(subscriptions)
