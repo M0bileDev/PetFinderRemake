@@ -5,7 +5,9 @@ import com.example.petfinderremake.common.domain.result.Result
 import com.example.petfinderremake.common.domain.result.RootError
 import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.domain.result.error.StorageError
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -17,29 +19,30 @@ class RequestAnimalTypesUseCase @Inject constructor(
         onLoading: (Boolean) -> Unit,
     ): Observable<Result<Unit, RootError>> {
 
-        return animalRepository.requestAnimalTypes()
-            .doOnSubscribe {
-                onLoading(true)
-            }
-            .flatMap { data ->
-                Observable.fromCallable<Result<Unit, RootError>> {
-                    when {
-                        data.isEmpty() -> {
-                            Result.Error(StorageError.NO_DATA_TO_STORE)
-                        }
+        val apiResult = animalRepository.requestAnimalTypes()
+        return apiResult
+            .subscribeOn(Schedulers.io())
+            .doOnSubscribe { onLoading(true) }
+            .map<Result<Unit, RootError>> { data ->
+                when {
+                    data.isEmpty() -> {
+                        Result.Error(StorageError.NO_DATA_TO_STORE)
+                    }
 
-                        else -> {
+                    else -> {
+                        with(animalRepository) {
                             animalRepository.storeAnimalTypes(data)
                             Result.Success(Unit)
                         }
                     }
                 }
-            }
-            .onErrorResumeWith { error ->
+            }.onErrorResumeNext { error ->
                 if (error is HttpException) {
-                    val networkError = NetworkError.entries.find { it.code == error.code() }
-                        ?: throw NetworkError.NetworkErrorTypeException()
-                    Result.Error(networkError)
+                    val networkError =
+                        NetworkError.entries.find { networkError -> networkError.code == error.code() }
+                            ?: throw NetworkError.NetworkErrorTypeException()
+                    val result = Result.Error(networkError)
+                    Observable.just(result)
                 } else {
                     throw Exception()
                 }

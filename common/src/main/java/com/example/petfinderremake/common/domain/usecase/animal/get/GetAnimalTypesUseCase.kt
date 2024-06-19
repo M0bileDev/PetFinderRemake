@@ -5,6 +5,7 @@ import com.example.petfinderremake.common.domain.repositories.AnimalRepository
 import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import javax.inject.Inject
 
 class GetAnimalTypesUseCase @Inject constructor(
@@ -14,6 +15,7 @@ class GetAnimalTypesUseCase @Inject constructor(
     operator fun invoke(): Observable<Result<List<AnimalType>, NotYetDefinedError>> {
         return animalRepository
             .getAnimalTypes()
+            .subscribeOn(Schedulers.io())
             .map { data ->
                 Result.Success(data)
             }

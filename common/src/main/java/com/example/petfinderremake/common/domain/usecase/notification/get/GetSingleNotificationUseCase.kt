@@ -5,6 +5,7 @@ import com.example.petfinderremake.common.domain.repositories.NotificationReposi
 import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import javax.inject.Inject
 
 class GetSingleNotificationUseCase @Inject constructor(
@@ -13,6 +14,7 @@ class GetSingleNotificationUseCase @Inject constructor(
     operator fun invoke(notificationId: Long): Observable<Result<Notification, NotYetDefinedError>> {
         return notificationRepository
             .getSingleNotification(notificationId)
+            .subscribeOn(Schedulers.io())
             .map { Result.Success(it) }
     }
 }

@@ -5,6 +5,7 @@ import com.example.petfinderremake.common.domain.repositories.AnimalRepository
 import com.example.petfinderremake.common.domain.result.Result
 import com.example.petfinderremake.common.domain.result.error.ArgumentError
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import javax.inject.Inject
 
 class GetAnimalTypeUseCase @Inject constructor(
@@ -14,10 +15,12 @@ class GetAnimalTypeUseCase @Inject constructor(
 
         return if (type.isEmpty()) {
             Observable
-                .just(Result.Error(ArgumentError.ARGUMENT_IS_EMPTY))
+                .just<Result<AnimalType, ArgumentError>>(Result.Error(ArgumentError.ARGUMENT_IS_EMPTY))
+                .subscribeOn(Schedulers.io())
         } else {
             animalRepository
                 .getAnimalType(type)
+                .subscribeOn(Schedulers.io())
                 .map { data ->
                     Result.Success(data)
                 }

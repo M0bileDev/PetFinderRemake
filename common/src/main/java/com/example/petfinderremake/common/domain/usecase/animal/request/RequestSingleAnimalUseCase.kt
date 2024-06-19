@@ -7,6 +7,7 @@ import com.example.petfinderremake.common.domain.result.error.ArgumentError
 import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.ext.isNegative
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -20,22 +21,25 @@ class RequestSingleAnimalUseCase @Inject constructor(
     ): Observable<Result<Unit, RootError>> {
 
         return if (id.isNegative()) {
-            Observable.just(Result.Error(ArgumentError.ARGUMENT_IS_NEGATIVE))
+            Observable
+                .just<Result<Unit, RootError>>(Result.Error(ArgumentError.ARGUMENT_IS_NEGATIVE))
+                .subscribeOn(Schedulers.io())
         } else {
-            animalRepository.requestAnimal(id)
-                .doOnSubscribe {
-                    onLoading(true)
-                }
-                .flatMap { data ->
-                    Observable.fromCallable<Result<Unit, RootError>> {
-                        animalRepository.storeAnimals(listOf(data))
-                        Result.Success(Unit)
-                    }
-                }.onErrorResumeWith { error ->
+
+            val apiResult = animalRepository.requestAnimal(id)
+            apiResult
+                .subscribeOn(Schedulers.io())
+                .doOnSubscribe { onLoading(true) }
+                .map<Result<Unit, RootError>> { data ->
+                    animalRepository.storeAnimals(listOf(data))
+                    Result.Success(Unit)
+                }.onErrorResumeNext { error ->
                     if (error is HttpException) {
-                        val networkError = NetworkError.entries.find { it.code == error.code() }
-                            ?: throw NetworkError.NetworkErrorTypeException()
-                        Result.Error(networkError)
+                        val networkError =
+                            NetworkError.entries.find { networkError -> networkError.code == error.code() }
+                                ?: throw NetworkError.NetworkErrorTypeException()
+                        val result = Result.Error(networkError)
+                        Observable.just(result)
                     } else {
                         throw Exception()
                     }

@@ -5,6 +5,7 @@ import com.example.petfinderremake.common.domain.repositories.NotificationReposi
 import com.example.petfinderremake.common.domain.result.NotYetDefinedError
 import com.example.petfinderremake.common.domain.result.Result
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import javax.inject.Inject
 
 class GetNotDisplayedNotificationsUseCase @Inject constructor(
@@ -13,6 +14,7 @@ class GetNotDisplayedNotificationsUseCase @Inject constructor(
     operator fun invoke(): Observable<Result<List<Notification>, NotYetDefinedError>> {
         return notificationRepository
             .getNotDisplayedNotifications()
+            .subscribeOn(Schedulers.io())
             .map { Result.Success(it) }
     }
 }
