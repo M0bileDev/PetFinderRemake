@@ -6,6 +6,7 @@ import com.example.petfinderremake.common.domain.model.animal.AnimalType
 import com.example.petfinderremake.common.domain.model.animal.details.AnimalWithDetails
 import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnimals
 import com.example.petfinderremake.common.domain.model.pagination.Pagination
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.subjects.BehaviorSubject
 import javax.inject.Inject
@@ -29,26 +30,31 @@ class PetFinderAnimalCache @Inject constructor() : AnimalStorage {
         allAnimals
     }
 
-    override fun storeAnimals(animals: List<AnimalWithDetails>) {
+    override fun storeAnimals(animals: List<AnimalWithDetails>): Completable {
         val updatedAnimals = animalsCache.value?.toMutableList()
         updatedAnimals?.addAll(animals)
         animalsCache.onNext(updatedAnimals?.toList())
+        return Completable.complete()
     }
 
-    override fun storePagination(pagination: Pagination) {
+    override fun storePagination(pagination: Pagination): Completable {
         paginationCache.onNext(pagination)
+        return Completable.complete()
     }
 
-    override fun storeAnimalTypes(types: List<AnimalType>) {
+    override fun storeAnimalTypes(types: List<AnimalType>): Completable {
         animalTypesCache.onNext(types)
+        return Completable.complete()
     }
 
-    override fun storeAnimalBreeds(breeds: List<AnimalBreeds>) {
+    override fun storeAnimalBreeds(breeds: List<AnimalBreeds>): Completable {
         animalBreedsCache.onNext(breeds)
+        return Completable.complete()
     }
 
-    override fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals) {
+    override fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals): Completable {
         discoverPaginatedAnimalsCache.onNext(paginatedAnimals)
+        return Completable.complete()
     }
 
 
@@ -81,16 +87,19 @@ class PetFinderAnimalCache @Inject constructor() : AnimalStorage {
         return discoverPaginatedAnimalsCache.hide()
     }
 
-    override fun deleteAnimals() {
+    override fun deleteAnimals(): Completable {
         animalsCache.onNext(emptyList())
+        return Completable.complete()
     }
 
-    override fun deleteBreeds() {
+    override fun deleteBreeds(): Completable {
         animalBreedsCache.onNext(emptyList())
+        return Completable.complete()
     }
 
-    override fun deletePagination() {
+    override fun deletePagination(): Completable {
         paginationCache.onNext(Pagination.initPagination)
+        return Completable.complete()
     }
 
 }
