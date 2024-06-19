@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.example.petfinderremake.common.domain.result.onSuccess
 import com.example.petfinderremake.common.domain.usecase.notification.get.GetNotDisplayedNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -18,7 +19,10 @@ class MainActivityViewModel @Inject constructor(
     private val subscriptions = CompositeDisposable()
 
     private val mainActivitySubject = BehaviorSubject.createDefault(MainActivityUiState())
-    val mainActivityUiState = mainActivitySubject.hide()
+    val mainActivityUiState = mainActivitySubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     init {
         observeAllNotDisplayedNotifications()
@@ -26,7 +30,6 @@ class MainActivityViewModel @Inject constructor(
 
     private fun observeAllNotDisplayedNotifications() {
         getNotDisplayedNotificationsUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result.onSuccess {
                     mainActivitySubject.onNext(MainActivityUiState(it.success.isNotEmpty()))
