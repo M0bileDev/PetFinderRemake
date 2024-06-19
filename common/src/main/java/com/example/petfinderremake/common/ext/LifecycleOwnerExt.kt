@@ -29,7 +29,8 @@ fun LifecycleOwner.subscribeError(
     disposableBlock = {
         errorObservable
             .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread()).subscribe { error ->
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { error ->
                 val (errorMessage, titleMessage) = when (error) {
                     is NetworkError -> networkErrorStringResource(error) to commonString.network_error
                     is StorageError -> storageErrorStringResource(error) to commonString.storage_error
