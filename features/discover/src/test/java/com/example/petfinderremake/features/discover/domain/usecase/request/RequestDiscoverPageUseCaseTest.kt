@@ -9,15 +9,16 @@ import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.domain.result.error.StorageError
 import com.example.petfinderremake.common.domain.result.onError
 import com.example.petfinderremake.features.discover.AnimalRepositoryTest
+import com.example.petfinderremake.features.discover.TestUtils
 import com.google.common.truth.Truth
-import io.mockk.coEvery
 import io.mockk.coVerifyOrder
-import io.mockk.coVerifySequence
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit4.MockKRule
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import io.mockk.verifyOrder
+import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -56,289 +57,316 @@ class RequestDiscoverPageUseCaseTest : AnimalRepositoryTest() {
 
     @Test
     fun `when request discover page, then result of use case is instance of Result`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = requestDiscoverPageUseCase(onLoading)
+        result.subscribe(testObserver)
 
-            //when
-            val result = requestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result::class.java)
     }
 
     @Test
     fun `when request discover page without any exceptions, then result of use case is instance of Result Success`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = requestDiscoverPageUseCase(onLoading)
+        result.subscribe(testObserver)
 
-            //when
-            val result = requestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Success::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Success::class.java)
     }
 
     @Test
     fun `when request discover page without any exceptions, then result of type Result Success is Unit`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = requestDiscoverPageUseCase(onLoading)
+        result.subscribe(testObserver)
 
-            //when
-            val result = requestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Success(Unit))
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isEqualTo(Result.Success(Unit))
     }
 
     @Test
     fun `when request discover page with network exceptions, then result of use case is instance of Result Error type`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Error::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Error::class.java)
     }
 
     @Test
     fun `when request discover page with network exceptions, then result of Error is type of NetworkError `() {
-        runBlocking {
+        var sut: RootError? = null
 
-            var error: RootError? = null
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-            result.onError { error = it.error }
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //then
-            Truth.assertThat(error).isInstanceOf(NetworkError::class.java)
-        }
+        //then
+        testObserver.values().first().onError { sut = it.error }
+        Truth.assertThat(sut).isInstanceOf(NetworkError::class.java)
     }
 
     @Test
     fun `when request discover page with network exceptions, then onLoading returns false `() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            mockRequestDiscoverPageUseCase(mockOnLoading)
-
-            //then
-            coVerifySequence {
-                mockOnLoading(true)
-                mockOnLoading(false)
-            }
+        //then
+        verifyOrder {
+            mockOnLoading(true)
+            mockOnLoading(false)
         }
     }
 
     @Test
     fun `when request discover page with ACCESS_DENIED_INVALID_CREDENTIALS exceptions, then result of use case is equal to ACCESS_DENIED_INVALID_CREDENTIALS`() {
-        runBlocking {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS))
     }
 
     @Test
     fun `when request discover page with ACCESS_DENIED_INSUFFICIENT_ACCESS exceptions, then result of use case is equal to ACCESS_DENIED_INSUFFICIENT_ACCESS`() {
-        runBlocking {
+//when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.ACCESS_DENIED_INSUFFICIENT_ACCESS))
     }
 
     @Test
     fun `when request discover page with NOT_FOUND exceptions, then result of use case is equal to NOT_FOUND`() {
-        runBlocking {
+//when
+        every { httpException.code() }.returns(NetworkError.NOT_FOUND.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.NOT_FOUND.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.NOT_FOUND))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.NOT_FOUND))
     }
 
     @Test
     fun `when request discover page with UNEXPECTED_ERROR exceptions, then result of use case is equal to UNEXPECTED_ERROR`() {
-        runBlocking {
+//when
+        every { httpException.code() }.returns(NetworkError.UNEXPECTED_ERROR.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.UNEXPECTED_ERROR.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.UNEXPECTED_ERROR))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.UNEXPECTED_ERROR))
     }
 
     @Test
     fun `when request discover page with MISSING_PARAMETERS exceptions, then result of use case is equal to MISSING_PARAMETERS`() {
-        runBlocking {
+//when
+        every { httpException.code() }.returns(NetworkError.MISSING_PARAMETERS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            every { httpException.code() }.returns(NetworkError.MISSING_PARAMETERS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result)
-                .isEqualTo(Result.Error(NetworkError.MISSING_PARAMETERS))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(NetworkError.MISSING_PARAMETERS))
     }
 
     @Test
     fun `when request discover page with unsupported exceptions, then thrown exception is instance of NetworkErrorTypeException`() {
-        runBlocking {
+        every { httpException.code() }.returns(501)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
 
-            var handledException: Exception? = null
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            try {
-                every { httpException.code() }.returns(0)
-                coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-                mockRequestDiscoverPageUseCase(onLoading)
-            } catch (e: Exception) {
-                handledException = e
-            }
 
-            //then
-            Truth.assertThat(handledException)
-                .isInstanceOf(NetworkError.NetworkErrorTypeException::class.java)
-
-        }
+        //then
+        testObserver
+            .assertNoValues()
+            .assertNotComplete()
+            .onError(
+                NetworkError.NetworkErrorTypeException()
+            )
     }
 
     @Test
     fun `when request discover page with storage exceptions, then result of use case is instance of Result Error type`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.just(
+                PaginatedAnimals.initPaginatedAnimals
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.returns(PaginatedAnimals.initPaginatedAnimals)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isInstanceOf(Result.Error::class.java)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        Truth.assertThat(sut).isInstanceOf(Result.Error::class.java)
     }
 
     @Test
     fun `when request discover page with storage exceptions, then result of Error is type of StorageError`() {
-        runBlocking {
+        var sut: RootError? = null
 
-            var error: RootError? = null
+        //when
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.just(
+                PaginatedAnimals.initPaginatedAnimals
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-            //when
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.returns(PaginatedAnimals.initPaginatedAnimals)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-            result.onError { error = it.error }
-
-            //then
-            Truth.assertThat(error).isInstanceOf(StorageError::class.java)
-
-        }
+        //then
+        testObserver.values().first().onError { sut = it.error }
+        Truth.assertThat(sut).isInstanceOf(StorageError::class.java)
     }
 
     @Test
     fun `when request discover page with storage exceptions, then StorageError is NO_DATA_TO_STORE`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.just(
+                PaginatedAnimals.initPaginatedAnimals
+            )
+        )
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        val result = mockRequestDiscoverPageUseCase(mockOnLoading)
+        result.subscribe(testObserver)
 
-
-            //when
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.returns(PaginatedAnimals.initPaginatedAnimals)
-            val result = mockRequestDiscoverPageUseCase(onLoading)
-
-            //then
-            Truth.assertThat(result).isEqualTo(Result.Error(StorageError.NO_DATA_TO_STORE))
-
-        }
+        //then
+        testObserver.assertValue(Result.Error(StorageError.NO_DATA_TO_STORE))
     }
 
     @Test
     fun `when request discover page with storage exceptions, then onLoading returns false`() {
-        runBlocking {
+        //when
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.just(
+                PaginatedAnimals.initPaginatedAnimals
+            )
+        )
 
-            //when
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.returns(PaginatedAnimals.initPaginatedAnimals)
-            mockRequestDiscoverPageUseCase(mockOnLoading)
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        mockRequestDiscoverPageUseCase(mockOnLoading).subscribe(testObserver)
 
-
-            //then
-            coVerifySequence {
-                mockOnLoading(true)
-                mockOnLoading(false)
-            }
-
+        //then
+        verifyOrder {
+            mockOnLoading(true)
+            mockOnLoading(false)
         }
     }
 
     @Test
     fun `when request discover page without  exceptions, then store discover page and loading are executed in order`() {
-        runBlocking {
-
-            //when
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.returns(notInitDiscoverPage)
-            coEvery { mockAnimalRepository.storeDiscoverPaginatedAnimals(notInitDiscoverPage) }.returns(
-                Unit
+        //when
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.just(
+                notInitDiscoverPage
             )
-            mockRequestDiscoverPageUseCase(mockOnLoading)
+        )
+        every { mockAnimalRepository.storeDiscoverPaginatedAnimals(notInitDiscoverPage) }.returns(
+            Completable.complete()
+        )
 
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        mockRequestDiscoverPageUseCase(mockOnLoading).subscribe(testObserver)
 
-            //then
-            coVerifyOrder {
-                mockAnimalRepository.storeDiscoverPaginatedAnimals(notInitDiscoverPage)
-                mockOnLoading(false)
-            }
-
+        //then
+        coVerifyOrder {
+            mockAnimalRepository.storeDiscoverPaginatedAnimals(notInitDiscoverPage)
+            mockOnLoading(false)
         }
+
+
     }
 
     @Test
     fun `when request discover page, then discover page is stored`() {
-        runBlocking {
+        //when
+        val testObserver = TestObserver<Result<Unit, RootError>>()
+        requestDiscoverPageUseCase(onLoading).subscribe(testObserver)
 
-            //when
-            requestDiscoverPageUseCase(onLoading)
+        //then
+        val testObserver2 = TestObserver<PaginatedAnimals>()
+        val result = animalRepository.getDiscoverPaginatedAnimals()
+        result.subscribe(testObserver2)
 
-            //then
-            val result = animalRepository.getDiscoverPaginatedAnimals().first()
-            Truth.assertThat(result).isEqualTo(notInitDiscoverPage)
-        }
+        val sut = testObserver2.values().first()
+        Truth.assertThat(sut).isEqualTo(TestUtils.paginationWithAnimals)
     }
 }
