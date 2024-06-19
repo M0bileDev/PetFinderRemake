@@ -21,15 +21,12 @@ import com.example.petfinderremake.common.presentation.screen.gallery.GallerySen
 import com.example.petfinderremake.features.search.R
 import com.example.petfinderremake.features.search.databinding.FragmentSearchBinding
 import com.example.petfinderremake.features.search.presentation.navigation.SearchNavigation
-import com.example.petfinderremake.logging.Logger
 import com.google.android.material.badge.BadgeDrawable
 import com.google.android.material.badge.BadgeUtils
 import com.google.android.material.badge.ExperimentalBadgeUtils
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -145,8 +142,6 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
             },
             disposableBlock = {
                 observeResultNavArg(this@SearchFragment)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { resultNavArg ->
                         viewModel.setupResultNavArg(resultNavArg)
                         clearResultNavArg(this@SearchFragment)
@@ -167,8 +162,6 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
             },
             disposableBlock = {
                 searchEvent
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { event ->
                         when (event) {
                             is SearchViewModel.SearchEvent.NavigateToFilter -> {
@@ -184,7 +177,6 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
     }
 
     private fun updateFilterMenuBadge(uiState: SearchUiState) = with(uiState) {
-        Logger.d("log001 isFilterActive $isFilterActive")
         if (isFilterActive) {
             badge.backgroundColor =
                 resources.getColor(androidx.appcompat.R.color.error_color_material_dark, null)
@@ -270,8 +262,6 @@ class SearchFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
             },
             disposableBlock = {
                 searchUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { uiState ->
                         updateAnimalGridAdapter(uiState)
                         updateFilterMenuBadge(uiState)

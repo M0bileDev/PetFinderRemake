@@ -25,6 +25,7 @@ import com.example.petfinderremake.common.presentation.screen.gallery.GallerySen
 import com.example.petfinderremake.features.search.domain.usecase.get.GetAnimalsUseCase
 import com.example.petfinderremake.features.search.domain.usecase.request.RequestAnimalsPageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
@@ -57,7 +58,10 @@ class SearchViewModel @Inject constructor(
     val storageError = storageErrorSubject.map { it as Error }
 
     private val searchEventSubject = PublishSubject.create<SearchEvent>()
-    val searchEvent = searchEventSubject.hide()
+    val searchEvent = searchEventSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     private val filterSubject = BehaviorSubject.createDefault(AnimalParameters.noAnimalParameters)
     private val animalsSubject = BehaviorSubject.createDefault<List<AnimalWithDetails>>(emptyList())
@@ -101,7 +105,7 @@ class SearchViewModel @Inject constructor(
             isLoadMore = loadingMore,
             isFilterActive = filter.isNotEmpty()
         )
-    }
+    }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     private val subscriptions = CompositeDisposable()
 
@@ -125,7 +129,6 @@ class SearchViewModel @Inject constructor(
 
     private fun observeAnimals() {
         getAnimalsUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result.onSuccess {
                     animalsSubject.onNext(it.success)
@@ -135,7 +138,6 @@ class SearchViewModel @Inject constructor(
 
     private fun observePagination() {
         getPaginationUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -148,11 +150,9 @@ class SearchViewModel @Inject constructor(
 
     private fun requestAnimalsInitPage(animalParameters: AnimalParameters) {
         deleteAnimalsUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe()
             .addTo(subscriptions)
         deletePaginationUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe()
             .addTo(subscriptions)
         requestAnimalsPage(
@@ -183,7 +183,6 @@ class SearchViewModel @Inject constructor(
             onLoading = { isLoading ->
                 onLoading(isLoading)
             })
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result.onNetworkError { networkError ->
                     networkErrorSubject.onNext(networkError)
@@ -221,7 +220,6 @@ class SearchViewModel @Inject constructor(
 
         if (filterArg.isEmpty()) {
             deleteAnimalsUseCase()
-                .subscribeOn(Schedulers.io())
                 .subscribe()
                 .addTo(subscriptions)
         } else {
