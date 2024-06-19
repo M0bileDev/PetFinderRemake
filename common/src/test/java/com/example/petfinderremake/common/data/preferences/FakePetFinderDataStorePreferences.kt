@@ -1,8 +1,10 @@
 package com.example.petfinderremake.common.data.preferences
 
 import com.example.petfinderremake.common.domain.preferences.Preferences
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import io.reactivex.rxjava3.core.BackpressureStrategy
+import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Flowable
+import io.reactivex.rxjava3.core.Observable
 
 class FakePetFinderDataStorePreferences : Preferences {
 
@@ -11,42 +13,51 @@ class FakePetFinderDataStorePreferences : Preferences {
     private var fakeTokenType = ""
     private var fakeNotificationsPermanentlyDenied: Boolean = false
 
-    override suspend fun putToken(token: String) {
+    override fun putToken(token: String): Completable {
         fakeToken = token
+        return Completable.complete()
     }
 
-    override suspend fun putTokenExpirationTime(time: Long) {
+    override fun getToken(): Flowable<String> {
+        return Observable.just(fakeToken).toFlowable(BackpressureStrategy.LATEST)
+    }
+
+    override fun putTokenExpirationTime(time: Long): Completable {
         fakeTokenExpirationTime = time
+        return Completable.complete()
+
     }
 
-    override suspend fun putTokenType(tokenType: String) {
+    override fun getTokenExpirationTime(): Flowable<Long> {
+        return Observable.just(fakeTokenExpirationTime).toFlowable(BackpressureStrategy.LATEST)
+    }
+
+    override fun putTokenType(tokenType: String): Completable {
         fakeTokenType = tokenType
+        return Completable.complete()
+
     }
 
-    override suspend fun deleteTokenInfo() {
+    override fun getTokenType(): Flowable<String> {
+        return Observable.just(fakeTokenType).toFlowable(BackpressureStrategy.LATEST)
+    }
+
+    override fun deleteTokenInfo(): Completable {
         fakeToken = ""
         fakeTokenType = ""
         fakeTokenExpirationTime = -1L
+        return Completable.complete()
+
     }
 
-    override suspend fun putNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean) {
+    override fun putNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean): Completable {
         fakeNotificationsPermanentlyDenied = isPermanentlyDenied
+        return Completable.complete()
     }
 
-    override fun getToken(): Flow<String> {
-        return flow { emit(fakeToken) }
-    }
-
-    override fun getTokenExpirationTime(): Flow<Long> {
-        return flow { emit(fakeTokenExpirationTime) }
-    }
-
-    override fun getTokenType(): Flow<String> {
-        return flow { emit(fakeTokenType) }
-    }
-
-    override fun getNotificationPermanentlyDenied(): Flow<Boolean> {
-        return flow { emit(fakeNotificationsPermanentlyDenied) }
+    override fun getNotificationPermanentlyDenied(): Flowable<Boolean> {
+        return Observable.just(fakeNotificationsPermanentlyDenied)
+            .toFlowable(BackpressureStrategy.LATEST)
     }
 
 }
