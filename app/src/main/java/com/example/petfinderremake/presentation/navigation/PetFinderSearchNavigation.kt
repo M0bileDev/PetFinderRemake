@@ -13,7 +13,9 @@ import com.example.petfinderremake.features.search.presentation.navigation.Searc
 import com.example.petfinderremake.features.search.presentation.screen.SearchFragmentArgs
 import com.example.petfinderremake.features.search.presentation.screen.SearchFragmentDirections
 import com.squareup.moshi.Moshi
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import javax.inject.Inject
 
 class PetFinderSearchNavigation @Inject constructor(
@@ -41,7 +43,7 @@ class PetFinderSearchNavigation @Inject constructor(
     override fun observeResultNavArg(fragment: Fragment): Observable<AnimalParameters> =
         with(fragment) {
             getNavigationResult(RESULT_KEY).map { it.toAnimalParameters(moshi) }
-        }
+        }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     override fun clearResultNavArg(fragment: Fragment) =
         with(fragment) {
