@@ -13,6 +13,7 @@ import com.example.petfinderremake.common.domain.model.animal.details.AnimalWith
 import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnimals
 import com.example.petfinderremake.common.domain.model.pagination.Pagination
 import com.example.petfinderremake.common.domain.repositories.AnimalRepository
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import javax.inject.Inject
 
@@ -110,24 +111,24 @@ class PetFinderAnimalRepository @Inject constructor(
         }
     }
 
-    override fun storeAnimals(animals: List<AnimalWithDetails>) {
-        animalStorage.storeAnimals(animals)
+    override fun storeAnimals(animals: List<AnimalWithDetails>): Completable {
+        return animalStorage.storeAnimals(animals)
     }
 
-    override fun storePagination(pagination: Pagination) {
-        animalStorage.storePagination(pagination)
+    override fun storePagination(pagination: Pagination): Completable {
+        return animalStorage.storePagination(pagination)
     }
 
-    override fun storeAnimalTypes(types: List<AnimalType>) {
-        animalStorage.storeAnimalTypes(types)
+    override fun storeAnimalTypes(types: List<AnimalType>): Completable {
+        return animalStorage.storeAnimalTypes(types)
     }
 
-    override fun storeAnimalBreeds(animalBreeds: List<AnimalBreeds>) {
-        animalStorage.storeAnimalBreeds(animalBreeds)
+    override fun storeAnimalBreeds(animalBreeds: List<AnimalBreeds>): Completable {
+        return animalStorage.storeAnimalBreeds(animalBreeds)
     }
 
-    override fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals) {
-        animalStorage.storeDiscoverPaginatedAnimals(paginatedAnimals)
+    override fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals): Completable {
+        return animalStorage.storeDiscoverPaginatedAnimals(paginatedAnimals)
     }
 
     override fun getAnimals(): Observable<List<AnimalWithDetails>> {
@@ -158,16 +159,16 @@ class PetFinderAnimalRepository @Inject constructor(
         return animalStorage.getDiscoverPaginatedAnimals()
     }
 
-    override fun deleteAnimals() {
-        animalStorage.deleteAnimals()
+    override fun deleteAnimals(): Completable {
+        return animalStorage.deleteAnimals()
     }
 
-    override fun deleteBreeds() {
-        animalStorage.deleteBreeds()
+    override fun deleteBreeds(): Completable {
+        return animalStorage.deleteBreeds()
     }
 
-    override fun deletePagination() {
-        animalStorage.deletePagination()
+    override fun deletePagination(): Completable {
+        return animalStorage.deletePagination()
     }
 
 }
