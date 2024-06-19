@@ -7,6 +7,7 @@ import com.example.petfinderremake.common.domain.usecase.notification.get.GetSin
 import com.example.petfinderremake.common.domain.usecase.notification.update.UpdateNotificationUseCase
 import com.example.petfinderremake.common.ext.getValueOrThrow
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -21,7 +22,10 @@ class NotificationDetailsViewModel @Inject constructor(
 
     private val notificationDetailsUiStateSubject =
         BehaviorSubject.createDefault(NotificationDetailsUiState())
-    val notificationDetailsUiState = notificationDetailsUiStateSubject.hide()
+    val notificationDetailsUiState = notificationDetailsUiStateSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     private val subscriptions = CompositeDisposable()
 
@@ -30,7 +34,7 @@ class NotificationDetailsViewModel @Inject constructor(
     }
 
     private fun getSingleNotification(notificationId: Long) {
-        getSingleNotificationUseCase(notificationId).subscribeOn(Schedulers.io())
+        getSingleNotificationUseCase(notificationId)
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -44,7 +48,8 @@ class NotificationDetailsViewModel @Inject constructor(
     }
 
     private fun updateNotificationDisplayed(notification: Notification) {
-        updateNotificationUseCase(notification).subscribeOn(Schedulers.io()).subscribe()
+        updateNotificationUseCase(notification)
+            .subscribe()
             .addTo(subscriptions)
     }
 

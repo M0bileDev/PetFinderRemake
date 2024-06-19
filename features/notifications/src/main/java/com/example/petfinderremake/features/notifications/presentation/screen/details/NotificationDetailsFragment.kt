@@ -11,10 +11,8 @@ import com.example.petfinderremake.common.presentation.navigation.CommonNavigati
 import com.example.petfinderremake.features.notifications.databinding.FragmentNotificationDetailsBinding
 import com.example.petfinderremake.features.notifications.presentation.navigation.NotificationNavigation
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -64,8 +62,6 @@ class NotificationDetailsFragment : Fragment() {
             },
             disposableBlock = {
                 notificationDetailsUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { uiState ->
                         updateView(uiState)
                     }.addTo(subscriptions)
