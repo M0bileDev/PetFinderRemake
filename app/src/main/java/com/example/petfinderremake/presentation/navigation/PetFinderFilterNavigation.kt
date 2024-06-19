@@ -1,7 +1,6 @@
 package com.example.petfinderremake.presentation.navigation
 
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.asFlow
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.petfinderremake.common.domain.model.AnimalParameters
@@ -17,9 +16,9 @@ import com.example.petfinderremake.features.filter.presentation.navigation.RESUL
 import com.example.petfinderremake.features.filter.presentation.screen.filter.FilterFragmentArgs
 import com.example.petfinderremake.features.filter.presentation.screen.filter.FilterFragmentDirections
 import com.squareup.moshi.Moshi
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import io.reactivex.rxjava3.schedulers.Schedulers
 import javax.inject.Inject
 
 class PetFinderFilterNavigation @Inject constructor(
@@ -46,7 +45,7 @@ class PetFinderFilterNavigation @Inject constructor(
     override fun observeResultNavArg(fragment: Fragment): Observable<AnimalParameters> =
         with(fragment) {
             getNavigationResult(RESULT_KEY).map { it.toAnimalParameters(moshi) }
-        }
+        }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     override fun clearResultNavArg(fragment: Fragment) =
         with(fragment) {
