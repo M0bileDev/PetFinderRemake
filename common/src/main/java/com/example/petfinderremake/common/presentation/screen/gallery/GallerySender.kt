@@ -2,12 +2,18 @@ package com.example.petfinderremake.common.presentation.screen.gallery
 
 import com.example.petfinderremake.common.domain.model.animal.media.Media
 import com.example.petfinderremake.common.domain.model.animal.media.checkIfMediaExists
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import io.reactivex.rxjava3.subjects.PublishSubject
 
 interface GallerySender {
     val gallerySenderSubject: PublishSubject<SenderEvent>
-    fun getGalleryEvent(): Observable<SenderEvent> = gallerySenderSubject.hide()
+    fun getGalleryEvent(): Observable<SenderEvent> = gallerySenderSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
+
     fun navigateToGallery(galleryArg: GalleryArg)
 
     sealed interface SenderEvent {

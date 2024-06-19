@@ -3,6 +3,7 @@ package com.example.petfinderremake.common.presentation.screen.animalDetails
 import androidx.fragment.app.Fragment
 import com.example.petfinderremake.common.ext.withLifecycleOwner
 import com.example.petfinderremake.common.presentation.utils.UserActionInterval.Companion.default
+import com.example.petfinderremake.logging.Logger
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -21,8 +22,7 @@ interface AnimalDetailsReceiver {
                 animalDetailsSender()
                     .getAnimalDetailsEvent()
                     .throttleFirst(default.elapsedTime, default.timeUnit)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread()).subscribe { event ->
+                    .subscribe { event ->
                         when (event) {
                             is AnimalDetailsSender.SenderEvent.NavigateToAnimalDetails -> {
                                 navigateToAnimalDetails(event.id)

@@ -26,8 +26,6 @@ interface GalleryReceiver {
                     UserActionInterval.default.elapsedTime,
                     UserActionInterval.default.timeUnit
                 )
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { event ->
                     when (event) {
                         is GallerySender.SenderEvent.DisplayNoInfo -> {
