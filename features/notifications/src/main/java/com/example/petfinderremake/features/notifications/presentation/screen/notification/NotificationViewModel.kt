@@ -7,8 +7,8 @@ import com.example.petfinderremake.common.domain.usecase.notification.get.GetAll
 import com.example.petfinderremake.common.domain.usecase.preferences.get.GetNotificationPermanentlyDeniedUseCase
 import com.example.petfinderremake.common.domain.usecase.preferences.put.PutNotificationsPermanentlyDeniedUseCase
 import com.example.petfinderremake.common.presentation.manager.permission.PermissionSender
-import com.example.petfinderremake.logging.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
@@ -30,9 +30,13 @@ class NotificationViewModel @Inject constructor(
     }
 
     private val notificationEventSubject = PublishSubject.create<NotificationEvent>()
-    val notificationEvent = notificationEventSubject.hide()
+    val notificationEvent = notificationEventSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     private val notificationsSubject = BehaviorSubject.createDefault(emptyList<Notification>())
+
     //    Default true because most of the OS versions not require POST_NOTIFICATIONS permission
     private val notificationsGrantedSubject = BehaviorSubject.createDefault(true)
     private val notificationsPermanentlyDeniedSubject = BehaviorSubject.createDefault(false)
@@ -62,7 +66,7 @@ class NotificationViewModel @Inject constructor(
         notificationState.copy(
             notifications = notifications
         )
-    }
+    }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     init {
         observeNotificationsPermanentlyDenied()
@@ -70,7 +74,8 @@ class NotificationViewModel @Inject constructor(
     }
 
     private fun observeNotifications() {
-        getAllNotificationsUseCase().subscribeOn(Schedulers.io()).subscribe { result ->
+        getAllNotificationsUseCase()
+            .subscribe { result ->
             with(result) {
                 onSuccess {
                     notificationsSubject.onNext(it.success)
@@ -81,7 +86,6 @@ class NotificationViewModel @Inject constructor(
 
     private fun observeNotificationsPermanentlyDenied() {
         getNotificationPermanentlyDeniedUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -104,8 +108,9 @@ class NotificationViewModel @Inject constructor(
     }
 
     fun updateNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean) {
-        putNotificationsPermanentlyDeniedUseCase(isPermanentlyDenied).subscribeOn(Schedulers.io())
-            .subscribe().addTo(subscriptions)
+        putNotificationsPermanentlyDeniedUseCase(isPermanentlyDenied)
+            .subscribe()
+            .addTo(subscriptions)
     }
 
     fun navigateToNotificationDetails(notificationId: Long) {

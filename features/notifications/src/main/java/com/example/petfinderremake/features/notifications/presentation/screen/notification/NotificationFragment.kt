@@ -21,10 +21,8 @@ import com.example.petfinderremake.features.notifications.databinding.FragmentNo
 import com.example.petfinderremake.features.notifications.presentation.adapter.NotificationAdapter
 import com.example.petfinderremake.features.notifications.presentation.navigation.NotificationNavigation
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -152,8 +150,6 @@ class NotificationFragment : Fragment() {
             },
             disposableBlock = {
                 notificationEvent
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { event ->
                         when (event) {
                             is NotificationViewModel.NotificationEvent.NavigateToNotificationDetails -> {
@@ -209,8 +205,6 @@ class NotificationFragment : Fragment() {
             },
             disposableBlock = {
                 notificationUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { uiState ->
                         updateView(uiState)
                         updateRecyclerView(uiState)
