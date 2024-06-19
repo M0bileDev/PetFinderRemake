@@ -4,6 +4,7 @@ import com.example.petfinderremake.common.data.local.dao.NotificationDao
 import com.example.petfinderremake.common.data.local.mapper.NotificationMapper
 import com.example.petfinderremake.common.domain.model.notification.Notification
 import com.example.petfinderremake.common.domain.repositories.NotificationRepository
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import javax.inject.Inject
 
@@ -12,19 +13,19 @@ class PetFinderNotificationRepository @Inject constructor(
     private val notificationDao: NotificationDao
 ) : NotificationRepository {
 
-    override fun insert(notification: Notification) {
+    override fun insert(notification: Notification): Completable {
         val notificationEntity = notificationMapper.mapToDatabaseEntity(notification)
-        notificationDao.insert(notificationEntity)
+        return notificationDao.insert(notificationEntity)
     }
 
-    override fun update(notification: Notification) {
+    override fun update(notification: Notification): Completable {
         val notificationEntity = notificationMapper.mapToDatabaseEntity(notification)
-        notificationDao.update(notificationEntity)
+        return notificationDao.update(notificationEntity)
     }
 
-    override fun delete(notification: Notification) {
+    override fun delete(notification: Notification): Completable {
         val notificationEntity = notificationMapper.mapToDatabaseEntity(notification)
-        notificationDao.delete(notificationEntity)
+        return notificationDao.delete(notificationEntity)
     }
 
     override fun getAllNotifications(): Observable<List<Notification>> {
