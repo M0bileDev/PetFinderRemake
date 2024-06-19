@@ -13,10 +13,8 @@ import com.example.petfinderremake.common.presentation.navigation.CommonNavigati
 import com.example.petfinderremake.features.filter.databinding.FragmentFilterBinding
 import com.example.petfinderremake.features.filter.presentation.navigation.FilterNavigation
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -100,8 +98,6 @@ class FilterFragment : Fragment() {
             jobBlock = { observeResultJob = it },
             disposableBlock = {
                 observeResultNavArg(this@FilterFragment)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { resultNavArg ->
                         viewModel.setupResultNavArg(resultNavArg)
                         clearResultNavArg(this@FilterFragment)
@@ -110,23 +106,27 @@ class FilterFragment : Fragment() {
         )
     }
 
-    private fun observeFilterEvent() {
+    private fun observeFilterEvent() = with(viewModel) {
         withLifecycleOwner(
             jobBlock = {
                 observeEventJob = it
             },
             disposableBlock = {
-                viewModel.filterEvent
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
+                filterEvent
                     .subscribe { event ->
                         when (event) {
                             is FilterViewModel.FilterEvent.NavigateBackWithResult -> {
-                                filterNavigation.navigateBackWithResult(this, event.resultNavArg)
+                                filterNavigation.navigateBackWithResult(
+                                    this@FilterFragment,
+                                    event.resultNavArg
+                                )
                             }
 
                             is FilterViewModel.FilterEvent.NavigateToSelect -> {
-                                filterNavigation.navigateToSelect(this, event.selectNavArg)
+                                filterNavigation.navigateToSelect(
+                                    this@FilterFragment,
+                                    event.selectNavArg
+                                )
                             }
                         }
                     }.addTo(subscriptions)
@@ -156,15 +156,13 @@ class FilterFragment : Fragment() {
         }
     }
 
-    private fun observeUiState() {
+    private fun observeUiState() = with(viewModel) {
         withLifecycleOwner(
             jobBlock = {
                 observeUiStateJob = it
             },
             disposableBlock = {
-                viewModel.filterUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
+                filterUiState
                     .subscribe { uiState ->
                         updateRefresh(uiState)
                         updateFilterTypeGroup(uiState)

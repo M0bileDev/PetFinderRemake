@@ -20,6 +20,7 @@ import com.example.petfinderremake.common.ext.getValueOrThrow
 import com.example.petfinderremake.features.filter.presentation.model.navigation.SelectNavArg
 import com.example.petfinderremake.features.filter.presentation.model.navigation.SelectType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
@@ -51,7 +52,10 @@ class FilterViewModel @Inject constructor(
     val storageError = storageErrorSubject.hide().map { it as Error }
 
     private val filterEventSubject = PublishSubject.create<FilterEvent>()
-    val filterEvent = filterEventSubject.hide()
+    val filterEvent = filterEventSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     private val animalTypesLoadingSubject = BehaviorSubject.createDefault(false)
     private val animalBreedsLoadingSubject = BehaviorSubject.createDefault(false)
@@ -78,7 +82,7 @@ class FilterViewModel @Inject constructor(
             animalTypesLoading,
             animalBreedsLoading
         )
-    }
+    }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     init {
         observeAnimalTypes()
@@ -88,7 +92,6 @@ class FilterViewModel @Inject constructor(
 
     private fun observeAnimalTypes() {
         getAnimalTypesUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -100,7 +103,6 @@ class FilterViewModel @Inject constructor(
 
     private fun observeAnimalBreeds() {
         getAnimalBreedsUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -115,7 +117,6 @@ class FilterViewModel @Inject constructor(
             onLoading = {
                 animalTypesLoadingSubject.onNext(it)
             })
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result
                     .onNetworkError(onNetworkError = {
@@ -133,7 +134,6 @@ class FilterViewModel @Inject constructor(
             onLoading = {
                 animalBreedsLoadingSubject.onNext(it)
             })
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result.onNetworkError(onNetworkError = {
                     networkErrorSubject.onNext(it)
@@ -152,7 +152,6 @@ class FilterViewModel @Inject constructor(
     fun onClearFilter() {
         filterSubject.onNext(AnimalParameters.noAnimalParameters)
         deleteBreedsUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe()
             .addTo(subscriptions)
         requestAnimalTypes()
