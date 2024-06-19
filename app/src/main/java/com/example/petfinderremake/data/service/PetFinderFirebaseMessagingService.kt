@@ -29,9 +29,6 @@ class PetFinderFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-
-        Logger.d("$TAG onMessageReceived: $message")
-
         val createdAt = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
         val data = message.data
         val title = data["title"].orEmpty()
