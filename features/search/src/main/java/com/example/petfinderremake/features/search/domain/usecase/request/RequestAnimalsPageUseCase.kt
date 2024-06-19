@@ -8,6 +8,7 @@ import com.example.petfinderremake.common.domain.result.RootError
 import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.domain.result.error.StorageError
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -21,7 +22,9 @@ class RequestAnimalsPageUseCase @Inject constructor(
         onLoading: (Boolean) -> Unit,
     ): Observable<Result<Unit, RootError>> {
 
-        return animalRepository.requestAnimalsPage(animalParameters, pageToLoad, pageSize)
+        return animalRepository
+            .requestAnimalsPage(animalParameters, pageToLoad, pageSize)
+            .subscribeOn(Schedulers.io())
             .doOnSubscribe {
                 onLoading(true)
             }
