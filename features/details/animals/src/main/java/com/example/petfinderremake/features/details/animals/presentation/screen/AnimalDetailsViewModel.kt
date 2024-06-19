@@ -7,6 +7,7 @@ import com.example.petfinderremake.common.presentation.screen.gallery.GallerySen
 import com.example.petfinderremake.common.presentation.screen.gallery.GallerySender.GalleryArg.Companion.runAction
 import com.example.petfinderremake.features.details.animals.domain.GetAnimalUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -23,7 +24,10 @@ class AnimalDetailsViewModel @Inject constructor(
     override val gallerySenderSubject = PublishSubject.create<GallerySender.SenderEvent>()
 
     private val detailsUiStateSubject = BehaviorSubject.createDefault(DetailsUiState.noDetailsUiState)
-    val detailsUiState = detailsUiStateSubject.hide()
+    val detailsUiState = detailsUiStateSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     fun setupArgs(idArgs: Long) {
         getAnimal(idArgs)
@@ -31,7 +35,6 @@ class AnimalDetailsViewModel @Inject constructor(
 
     private fun getAnimal(id: Long) {
         getAnimalUseCase(id)
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess { result ->

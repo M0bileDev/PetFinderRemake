@@ -96,8 +96,6 @@ class AnimalDetailsFragment : Fragment(), GalleryReceiver {
             },
             disposableBlock = {
                 detailsUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { uiState ->
                         updateDetailsTop(uiState)
                         updateDescription(uiState.descriptionSection)
