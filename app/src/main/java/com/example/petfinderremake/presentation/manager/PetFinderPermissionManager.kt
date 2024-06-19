@@ -19,9 +19,7 @@ import com.example.petfinderremake.common.presentation.manager.permission.getPer
 import com.example.petfinderremake.common.presentation.utils.commonString
 import com.example.petfinderremake.common.presentation.utils.showPermissionDialog
 import com.example.petfinderremake.common.presentation.utils.showPermissionNotGranted
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -108,9 +106,8 @@ class PetFinderPermissionManager @Inject constructor() : PermissionManager {
     ) = with(lifecycleOwner) {
         withLifecycleOwner(
             disposableBlock = {
-                permissionSender().getPermissionEvent()
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
+                permissionSender()
+                    .getPermissionEvent()
                     .subscribe { event ->
                         when (event) {
                             is PermissionSender.PermissionEvent.ShowPermissionRationale -> {
