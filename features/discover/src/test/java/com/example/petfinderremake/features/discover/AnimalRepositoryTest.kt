@@ -1,9 +1,11 @@
 package com.example.petfinderremake.features.discover
 
-import com.example.petfinderremake.common.domain.model.pagination.Pagination
+import org.junit.Rule
 
 abstract class AnimalRepositoryTest {
 
-    val animalRepository = FakeAnimalRepository()
+    @get:Rule
+    val rxImmediateSchedulerRule = RxImmediateSchedulerRule()
 
+    val animalRepository = FakeAnimalRepository()
 }

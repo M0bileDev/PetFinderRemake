@@ -8,8 +8,8 @@ import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnima
 import com.example.petfinderremake.common.domain.model.pagination.Pagination
 import com.example.petfinderremake.common.domain.repositories.AnimalRepository
 import com.example.petfinderremake.features.discover.TestUtils.paginationWithAnimals
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Observable
 
 class FakeAnimalRepository : AnimalRepository {
 
@@ -19,95 +19,111 @@ class FakeAnimalRepository : AnimalRepository {
     private var fakePagination = Pagination.initPagination
     private var fakePaginatedAnimals = paginationWithAnimals
 
-    override suspend fun requestAnimalsPage(
+    override fun requestAnimalsPage(
         animalParameters: AnimalParameters,
         pageToLoad: Int,
         pageSize: Int
-    ): PaginatedAnimals {
-        return fakePaginatedAnimals
+    ): Observable<PaginatedAnimals> {
+        return Observable.just(fakePaginatedAnimals)
     }
 
-    override suspend fun requestAnimal(id: Long): AnimalWithDetails {
-        return AnimalWithDetails.noAnimalWithDetails
+    override fun requestAnimal(id: Long): Observable<AnimalWithDetails> {
+        return Observable.just(AnimalWithDetails.noAnimalWithDetails)
     }
 
-    override suspend fun requestAnimalTypes(): List<AnimalType> {
-        return listOf(
-            AnimalType(emptyList(), emptyList(), emptyList(), "Type1"),
-            AnimalType(emptyList(), emptyList(), emptyList(), "Type2")
+    override fun requestAnimalTypes(): Observable<List<AnimalType>> {
+        return Observable.just(
+            listOf(
+                AnimalType(emptyList(), emptyList(), emptyList(), "Type1"),
+                AnimalType(emptyList(), emptyList(), emptyList(), "Type2")
+            )
         )
     }
 
-    override suspend fun requestAnimalType(type: String): AnimalType {
-        return AnimalType(emptyList(), emptyList(), emptyList(), "Type1")
+    override fun requestAnimalType(type: String): Observable<AnimalType> {
+        return Observable.just(AnimalType(emptyList(), emptyList(), emptyList(), "Type1"))
     }
 
-    override suspend fun requestAnimalBreeds(type: String): List<AnimalBreeds> {
-        return listOf(AnimalBreeds("Breed1"), AnimalBreeds("Breed2"), AnimalBreeds("Breed3"))
+    override fun requestAnimalBreeds(type: String): Observable<List<AnimalBreeds>> {
+        return Observable.just(
+            listOf(
+                AnimalBreeds("Breed1"),
+                AnimalBreeds("Breed2"),
+                AnimalBreeds("Breed3")
+            )
+        )
     }
 
-    override suspend fun requestDiscoverPage(): PaginatedAnimals {
-        return fakePaginatedAnimals
+    override fun requestDiscoverPage(): Observable<PaginatedAnimals> {
+        return Observable.just(fakePaginatedAnimals)
     }
 
-    override suspend fun storeAnimals(animals: List<AnimalWithDetails>) {
+    override fun storeAnimals(animals: List<AnimalWithDetails>): Completable {
         fakeAnimals.addAll(animals)
+        return Completable.complete()
     }
 
-    override suspend fun storePagination(pagination: Pagination) {
+    override fun storePagination(pagination: Pagination): Completable {
         fakePagination = pagination
+        return Completable.complete()
     }
 
-    override suspend fun storeAnimalTypes(types: List<AnimalType>) {
+    override fun storeAnimalTypes(types: List<AnimalType>): Completable {
         fakeAnimalTypes.addAll(types)
+        return Completable.complete()
     }
 
-    override suspend fun storeAnimalBreeds(animalBreeds: List<AnimalBreeds>) {
+    override fun storeAnimalBreeds(animalBreeds: List<AnimalBreeds>): Completable {
         fakeAnimalBreeds.addAll(animalBreeds)
+        return Completable.complete()
     }
 
-    override suspend fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals) {
+    override fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals): Completable {
         fakePaginatedAnimals = paginatedAnimals
+        return Completable.complete()
     }
 
-    override fun getAnimals(): Flow<List<AnimalWithDetails>> {
-        return flow { emit(fakeAnimals) }
+    override fun getAnimals(): Observable<List<AnimalWithDetails>> {
+        return Observable.just(fakeAnimals)
     }
 
-    override fun getPagination(): Flow<Pagination> {
-        return flow { emit(fakePagination) }
+    override fun getPagination(): Observable<Pagination> {
+        return Observable.just(fakePagination)
     }
 
-    override fun getAnimal(id: Long): Flow<AnimalWithDetails> {
-        return flow { emit(fakeAnimals.first { it.id == id }) }
+    override fun getAnimal(id: Long): Observable<AnimalWithDetails> {
+        return Observable.just(fakeAnimals.first { it.id == id })
     }
 
-    override fun getAnimalTypes(): Flow<List<AnimalType>> {
-        return flow { emit(fakeAnimalTypes) }
+    override fun getAnimalTypes(): Observable<List<AnimalType>> {
+        return Observable.just(fakeAnimalTypes)
     }
 
-    override fun getAnimalType(type: String): Flow<AnimalType> {
-        return flow { emit(fakeAnimalTypes.first { it.name == type }) }
+    override fun getAnimalType(type: String): Observable<AnimalType> {
+        return Observable.just(fakeAnimalTypes.first { it.name == type })
     }
 
-    override fun getAnimalBreeds(): Flow<List<AnimalBreeds>> {
-        return flow { emit(fakeAnimalBreeds) }
+    override fun getAnimalBreeds(): Observable<List<AnimalBreeds>> {
+        return Observable.just(fakeAnimalBreeds)
     }
 
-    override fun getDiscoverPaginatedAnimals(): Flow<PaginatedAnimals> {
-        return flow { emit(fakePaginatedAnimals) }
+    override fun getDiscoverPaginatedAnimals(): Observable<PaginatedAnimals> {
+        return Observable.just(fakePaginatedAnimals)
     }
 
-    override suspend fun deleteAnimals() {
+    override fun deleteAnimals(): Completable {
         fakeAnimals.clear()
+        return Completable.complete()
     }
 
-    override suspend fun deleteBreeds() {
+    override fun deleteBreeds(): Completable {
         fakeAnimalBreeds.clear()
+        return Completable.complete()
     }
 
-    override suspend fun deletePagination() {
+    override fun deletePagination(): Completable {
         fakePagination = Pagination.initPagination
+        return Completable.complete()
     }
 
 }
