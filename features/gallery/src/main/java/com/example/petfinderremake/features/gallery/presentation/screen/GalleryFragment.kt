@@ -12,10 +12,8 @@ import com.example.petfinderremake.common.presentation.navigation.GalleryNavigat
 import com.example.petfinderremake.features.gallery.databinding.FragmentGalleryBinding
 import com.example.petfinderremake.features.gallery.presentation.adapter.GalleryAdapter
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -67,8 +65,6 @@ class GalleryFragment : Fragment() {
             },
             disposableBlock = {
                 galleryEvent
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { event ->
                         when (event) {
                             GalleryViewModel.GalleryEvent.NavigateBack -> {
@@ -99,8 +95,6 @@ class GalleryFragment : Fragment() {
             },
             disposableBlock = {
                 galleryUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { uiState ->
                         updateRecyclerView(uiState)
                     }.addTo(subscriptions)
