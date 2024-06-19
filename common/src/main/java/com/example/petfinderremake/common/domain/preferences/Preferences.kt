@@ -34,16 +34,18 @@
 
 package com.example.petfinderremake.common.domain.preferences
 
+import androidx.datastore.preferences.core.Preferences
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Single
 
 interface Preferences {
 
-    fun putToken(token: String): Single<androidx.datastore.preferences.core.Preferences>
-    fun putTokenExpirationTime(time: Long): Single<androidx.datastore.preferences.core.Preferences>
-    fun putTokenType(tokenType: String): Single<androidx.datastore.preferences.core.Preferences>
-    fun deleteTokenInfo(): Single<androidx.datastore.preferences.core.Preferences>
-    fun putNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean): Single<androidx.datastore.preferences.core.Preferences>
+    fun putToken(token: String): Completable
+    fun putTokenExpirationTime(time: Long): Completable
+    fun putTokenType(tokenType: String): Completable
+    fun deleteTokenInfo(): Completable
+    fun putNotificationsPermanentlyDenied(isPermanentlyDenied: Boolean): Completable
 
     fun getToken(): Flowable<String>
     fun getTokenExpirationTime(): Flowable<Long>

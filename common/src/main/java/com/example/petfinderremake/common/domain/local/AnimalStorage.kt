@@ -5,19 +5,20 @@ import com.example.petfinderremake.common.domain.model.animal.AnimalType
 import com.example.petfinderremake.common.domain.model.animal.details.AnimalWithDetails
 import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnimals
 import com.example.petfinderremake.common.domain.model.pagination.Pagination
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 
 interface AnimalStorage {
 
-    fun storeAnimals(animals: List<AnimalWithDetails>)
-    fun storePagination(pagination: Pagination)
-    fun storeAnimalTypes(types: List<AnimalType>)
-    fun storeAnimalBreeds(breeds: List<AnimalBreeds>)
-    fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals)
+    fun storeAnimals(animals: List<AnimalWithDetails>): Completable
+    fun storePagination(pagination: Pagination): Completable
+    fun storeAnimalTypes(types: List<AnimalType>): Completable
+    fun storeAnimalBreeds(breeds: List<AnimalBreeds>): Completable
+    fun storeDiscoverPaginatedAnimals(paginatedAnimals: PaginatedAnimals): Completable
 
-    fun deleteAnimals()
-    fun deletePagination()
-    fun deleteBreeds()
+    fun deleteAnimals(): Completable
+    fun deletePagination(): Completable
+    fun deleteBreeds(): Completable
 
     fun getAnimals(): Observable<List<AnimalWithDetails>>
     fun getPagination(): Observable<Pagination>
