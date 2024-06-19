@@ -4,6 +4,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.example.petfinderremake.common.domain.model.animal.details.AnimalWithDetails
 import com.example.petfinderremake.common.domain.model.pagination.PaginatedAnimals
 import com.example.petfinderremake.common.domain.repositories.AnimalRepository
+import com.example.petfinderremake.common.domain.result.error.Error
 import com.example.petfinderremake.common.domain.result.error.NetworkError
 import com.example.petfinderremake.common.domain.result.error.StorageError
 import com.example.petfinderremake.common.domain.usecase.animal.get.GetAnimalTypesUseCase
@@ -16,29 +17,18 @@ import com.example.petfinderremake.features.discover.TestUtils.animalWithNoMedia
 import com.example.petfinderremake.features.discover.domain.usecase.get.GetDiscoverPaginatedAnimalsUseCase
 import com.example.petfinderremake.features.discover.domain.usecase.request.RequestDiscoverPageUseCase
 import com.google.common.truth.Truth.assertThat
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit4.MockKRule
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.observers.TestObserver
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import retrofit2.HttpException
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class DiscoverViewModelTest : AnimalRepositoryTest() {
 
     @get:Rule
@@ -47,8 +37,6 @@ class DiscoverViewModelTest : AnimalRepositoryTest() {
     @get:Rule
     val mockkRule = MockKRule(this)
 
-    private val testDispatcher = StandardTestDispatcher()
-
     private lateinit var discoverViewModel: DiscoverViewModel
     private lateinit var requestDiscoverPageUseCase: RequestDiscoverPageUseCase
     private lateinit var getDiscoverPaginatedAnimalsUseCase: GetDiscoverPaginatedAnimalsUseCase
@@ -56,6 +44,7 @@ class DiscoverViewModelTest : AnimalRepositoryTest() {
     private lateinit var getAnimalTypesUseCase: GetAnimalTypesUseCase
     private val typeName = ""
 
+    @MockK(relaxed = true)
     private lateinit var mockDiscoverViewModel: DiscoverViewModel
 
     @MockK(relaxed = true)
@@ -74,9 +63,6 @@ class DiscoverViewModelTest : AnimalRepositoryTest() {
 
     @Before
     fun setup() {
-
-        Dispatchers.setMain(testDispatcher)
-
         requestDiscoverPageUseCase = spyk(RequestDiscoverPageUseCase(animalRepository))
         getDiscoverPaginatedAnimalsUseCase =
             spyk(GetDiscoverPaginatedAnimalsUseCase(animalRepository))
@@ -105,274 +91,254 @@ class DiscoverViewModelTest : AnimalRepositoryTest() {
                 mockRequestAnimalTypesUseCase,
                 mockGetAnimalTypesUseCase
             )
+    }
+
+
+    @Test
+    fun `when view model is initialize, then getDiscoverPaginatedAnimalsUseCase is execute`() {
+        //when
+        discoverViewModel
+
+        //then
+        verify {
+            getDiscoverPaginatedAnimalsUseCase()
+        }
 
     }
 
-    @After
-    fun teardown() {
-        Dispatchers.resetMain()
-        testDispatcher.cancel()
+    @Test
+    fun `when view model is initialize, then getAnimalTypesUseCase is execute`() {
+
+        //when
+        discoverViewModel
+
+        //then
+        verify {
+            getAnimalTypesUseCase()
+        }
+
     }
 
     @Test
-    fun `when view model is initialize, then getDiscoverPaginatedAnimalsUseCase is execute`() =
-        runTest {
+    fun `when view model requestData method is execute, then requestDiscoverPageUseCase is executed`() {
 
-            //when
-            discoverViewModel
+        //when
+        discoverViewModel.requestData()
 
-            //then
-            verify {
-                getDiscoverPaginatedAnimalsUseCase()
-            }
-
+        //then
+        verify {
+            requestDiscoverPageUseCase(any())
         }
 
+    }
+
     @Test
-    fun `when view model is initialize, then getAnimalTypesUseCase is execute`() =
-        runTest {
+    fun `when view model requestData method is execute, then requestAnimalTypesUseCase is executed`() {
+        //when
+        discoverViewModel.requestData()
 
-            //when
-            discoverViewModel
-
-            //then
-            verify {
-                getAnimalTypesUseCase()
-            }
-
+        //then
+        verify {
+            requestAnimalTypesUseCase(any())
         }
 
-    @Test
-    fun `when view model requestData method is execute, then requestDiscoverPageUseCase is executed`() =
-        runTest {
+    }
 
+    @Test
+    fun `given paginatedAnimals, when and navigateToGallery with existing media, then gallerySenderEvent has SenderEvent NavigateToGallery media`() {
+        //given
+        discoverViewModel.requestData()
+
+        //when
+        val testObserver = TestObserver<GallerySender.SenderEvent>()
+        val result = discoverViewModel.getGalleryEvent()
+        result.subscribe(testObserver)
+
+        discoverViewModel.navigateToGallery(GallerySender.GalleryArg.GalleryId(animalWithMedia.id))
+
+        //then
+        testObserver.assertValue(GallerySender.SenderEvent.NavigateToGallery(animalWithMedia.media))
+    }
+
+    @Test
+    fun `given paginatedAnimals, when navigateToGallery with no existing media, then gallerySenderEvent has SenderEvent DisplayNoInfo`() {
+        //given
+        discoverViewModel.requestData()
+
+        //when
+        val testObserver = TestObserver<GallerySender.SenderEvent>()
+        val result = discoverViewModel.getGalleryEvent()
+        result.subscribe(testObserver)
+
+        discoverViewModel.navigateToGallery(GallerySender.GalleryArg.GalleryId(animalWithNoMedia.id))
+
+        //then
+        testObserver.assertValue(GallerySender.SenderEvent.DisplayNoInfo)
+    }
+
+    @Test
+    fun `given paginatedAnimals, when navigateToGallery with no existing animal, then Exception is thrown`() {
+
+        var exception: Exception? = null
+
+        //given
+        discoverViewModel.requestData()
+
+        try {
             //when
-            discoverViewModel.requestData()
-
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            coVerify {
-                requestDiscoverPageUseCase(any())
-            }
-
-        }
-
-    @Test
-    fun `when view model requestData method is execute, then requestAnimalTypesUseCase is executed`() =
-        runTest {
-
-            //when
-            discoverViewModel.requestData()
-
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            coVerify {
-                requestAnimalTypesUseCase(any())
-            }
-
-        }
-
-    @Test
-    fun `given paginatedAnimals, when and navigateToGallery with existing media, then gallerySenderEvent has SenderEvent NavigateToGallery media`() =
-        runTest {
-
-            //given
-            discoverViewModel.requestData()
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //when
-            discoverViewModel.navigateToGallery(GallerySender.GalleryArg.GalleryId(animalWithMedia.id))
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            val result = discoverViewModel.gallerySenderEvent.receiveAsFlow().first()
-            assertThat(result).isEqualTo(GallerySender.SenderEvent.NavigateToGallery(animalWithMedia.media))
-
-        }
-
-    @Test
-    fun `given paginatedAnimals, when navigateToGallery with no existing media, then gallerySenderEvent has SenderEvent DisplayNoInfo`() =
-        runTest {
-
-            //given
-            discoverViewModel.requestData()
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //when
-            discoverViewModel.navigateToGallery(GallerySender.GalleryArg.GalleryId(animalWithNoMedia.id))
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            val result = discoverViewModel.gallerySenderEvent.receiveAsFlow().first()
-            assertThat(result).isEqualTo(GallerySender.SenderEvent.DisplayNoInfo)
-
-        }
-
-    @Test
-    fun `given paginatedAnimals, when navigateToGallery with no existing animal, then Exception is thrown`() =
-        runTest {
-
-            var exception: Exception? = null
-
-            try {
-                //given
-                discoverViewModel.requestData()
-                testDispatcher.scheduler.advanceUntilIdle()
-
-                //when
-                discoverViewModel.navigateToGallery(
-                    GallerySender.GalleryArg.GalleryId(
-                        AnimalWithDetails.noAnimalWithDetails.id
-                    )
-                )
-                testDispatcher.scheduler.advanceUntilIdle()
-            } catch (e: Exception) {
-                exception = e
-            }
-
-
-            //then
-            assertThat(exception).isNotNull()
-
-        }
-
-    @Test
-    fun `when navigateToAnimalDetails, then animalDetailsSenderEvent has SenderEvent NavigateToAnimalDetails`() =
-        runTest {
-
-            //when
-            discoverViewModel.navigateToAnimalDetails(animalWithNoMedia.id)
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            val result = discoverViewModel.animalDetailsSenderEvent.receiveAsFlow().first()
-            assertThat(result).isEqualTo(
-                AnimalDetailsSender.SenderEvent.NavigateToAnimalDetails(
-                    animalWithNoMedia.id
+            discoverViewModel.navigateToGallery(
+                GallerySender.GalleryArg.GalleryId(
+                    AnimalWithDetails.noAnimalWithDetails.id
                 )
             )
-
+        } catch (e: Exception) {
+            exception = e
         }
 
+        //then
+        assertThat(exception).isNotNull()
+
+    }
+
     @Test
-    fun `when navigateToSearch with type, then discoverEventChannel has SenderEvent DiscoverEvent NavigateToSearch type`() =
-        runTest {
+    fun `when navigateToAnimalDetails, then animalDetailsSenderEvent has SenderEvent NavigateToAnimalDetails`() {
+        //when
+        val testObserver = TestObserver<AnimalDetailsSender.SenderEvent>()
+        val result = discoverViewModel.animalDetailsSenderSubject
+        result.subscribe(testObserver)
 
-            //when
-            discoverViewModel.navigateToSearch(typeName)
-            testDispatcher.scheduler.advanceUntilIdle()
+        discoverViewModel.navigateToAnimalDetails(animalWithNoMedia.id)
 
-            //then
-            val result = discoverViewModel.discoverEvent.first()
-            assertThat(result).isEqualTo(
-                DiscoverViewModel.DiscoverEvent.NavigateToSearch(typeName)
+        //then
+        testObserver.assertValue(
+            AnimalDetailsSender.SenderEvent.NavigateToAnimalDetails(
+                animalWithNoMedia.id
             )
-
-        }
+        )
+    }
 
     @Test
-    fun `when navigateToSearch empty type, then discoverEventChannel has SenderEvent DiscoverEvent NavigateToSearch empty type`() =
-        runTest {
+    fun `when navigateToSearch with type, then discoverEventChannel has SenderEvent DiscoverEvent NavigateToSearch type`() {
+        //when
+        val testObserver = TestObserver<DiscoverViewModel.DiscoverEvent>()
+        val result = discoverViewModel.discoverEvent
+        result.subscribe(testObserver)
 
-            //when
-            discoverViewModel.navigateToSearch()
-            testDispatcher.scheduler.advanceUntilIdle()
+        discoverViewModel.navigateToSearch(typeName)
 
-            //then
-            val result = discoverViewModel.discoverEvent.first()
-            assertThat(result).isEqualTo(
-                DiscoverViewModel.DiscoverEvent.NavigateToSearch("")
+        //then
+        testObserver.assertValue(
+            DiscoverViewModel.DiscoverEvent.NavigateToSearch(typeName)
+        )
+    }
+
+    @Test
+    fun `when navigateToSearch empty type, then discoverEventChannel has SenderEvent DiscoverEvent NavigateToSearch empty type`() {
+        //when
+        val testObserver = TestObserver<DiscoverViewModel.DiscoverEvent>()
+        val result = discoverViewModel.discoverEvent
+        result.subscribe(testObserver)
+
+        discoverViewModel.navigateToSearch()
+
+        //then
+        testObserver.assertValue(
+            DiscoverViewModel.DiscoverEvent.NavigateToSearch("")
+        )
+
+    }
+
+    @Test
+    fun `when view model requestData method is execute, then discoverUiState is not noDiscoverUiState`() {
+        //when
+        discoverViewModel.requestData()
+
+        //then
+        val testObserver = TestObserver<DiscoverUiState>()
+        val result = discoverViewModel.discoverUiState
+        result.subscribe(testObserver)
+
+        val sut = testObserver.values().first()
+        assertThat(sut).isNotEqualTo(DiscoverUiState.noDiscoverUiState)
+    }
+
+    @Test
+    fun `when view model requestData and repository requestDiscoverPage method throws network exception ACCESS_DENIED_INVALID_CREDENTIALS, then networkErrorChannel has ACCESS_DENIED_INVALID_CREDENTIALS`() {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.error(
+                httpException
             )
+        )
 
-        }
+        val testObserver = TestObserver<Error>()
+        val result = mockDiscoverViewModel.networkError
+        result.subscribe(testObserver)
 
-    @Test
-    fun `when view model requestData method is execute, then discoverUiState is not noDiscoverUiState`() =
-        runTest {
+        mockDiscoverViewModel.requestData()
 
-            //when
-            discoverViewModel.requestData()
-
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            val result = discoverViewModel.discoverUiState.first()
-            assertThat(result).isNotEqualTo(DiscoverUiState.noDiscoverUiState)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isEqualTo(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS)
+    }
 
     @Test
-    fun `when view model requestData and repository requestDiscoverPage method throws network exception ACCESS_DENIED_INVALID_CREDENTIALS, then networkErrorChannel has ACCESS_DENIED_INVALID_CREDENTIALS`() =
-        runTest {
+    fun `when view model requestData and repository requestDiscoverPage method throws storage exception NO_DATA_TO_STORE, then storageErrorChannel has NO_DATA_TO_STORE`() {
+        //when
+        every { mockAnimalRepository.requestDiscoverPage() }.returns(
+            Observable.just(
+                PaginatedAnimals.initPaginatedAnimals
+            )
+        )
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.throws(httpException)
-            mockDiscoverViewModel.requestData()
+        val testObserver = TestObserver<Error>()
+        val result = mockDiscoverViewModel.storageError
+        result.subscribe(testObserver)
 
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
+        mockDiscoverViewModel.requestData()
 
-            //then
-            val result = mockDiscoverViewModel.networkError.first()
-            assertThat(result).isEqualTo(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS)
-
-        }
-
-    @Test
-    fun `when view model requestData and repository requestDiscoverPage method throws storage exception NO_DATA_TO_STORE, then storageErrorChannel has NO_DATA_TO_STORE`() =
-        runTest {
-
-            //when
-            coEvery { mockAnimalRepository.requestDiscoverPage() }.returns(PaginatedAnimals.initPaginatedAnimals)
-            mockDiscoverViewModel.requestData()
-
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            //then
-            val result = mockDiscoverViewModel.storageError.first()
-            assertThat(result).isEqualTo(StorageError.NO_DATA_TO_STORE)
-
-        }
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isEqualTo(StorageError.NO_DATA_TO_STORE)
+    }
 
     @Test
-    fun `when view model requestData and repository requestAnimalTypes method throws network exception ACCESS_DENIED_INVALID_CREDENTIALS, then networkErrorChannel has ACCESS_DENIED_INVALID_CREDENTIALS`() =
-        runTest {
+    fun `when view model requestData and repository requestAnimalTypes method throws network exception ACCESS_DENIED_INVALID_CREDENTIALS, then networkErrorChannel has ACCESS_DENIED_INVALID_CREDENTIALS`() {
+        //when
+        every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(
+            Observable.error(
+                httpException
+            )
+        )
 
-            //when
-            every { httpException.code() }.returns(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS.code)
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.throws(httpException)
-            mockDiscoverViewModel.requestData()
+        val testObserver = TestObserver<Error>()
+        val result = mockDiscoverViewModel.networkError
+        result.subscribe(testObserver)
 
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
+        mockDiscoverViewModel.requestData()
 
-            //then
-            val result = mockDiscoverViewModel.networkError.first()
-            assertThat(result).isEqualTo(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS)
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isEqualTo(NetworkError.ACCESS_DENIED_INVALID_CREDENTIALS)
 
-        }
+    }
 
     @Test
-    fun `when view model requestData and repository requestAnimalTypes method throws storage exception NO_DATA_TO_STORE, then storageErrorChannel has NO_DATA_TO_STORE`() =
-        runTest {
+    fun `when view model requestData and repository requestAnimalTypes method throws storage exception NO_DATA_TO_STORE, then storageErrorChannel has NO_DATA_TO_STORE`() {
+        //when
+        every { mockAnimalRepository.requestAnimalTypes() }.returns(Observable.just(emptyList()))
 
-            //when
-            coEvery { mockAnimalRepository.requestAnimalTypes() }.returns(emptyList())
-            mockDiscoverViewModel.requestData()
+        val testObserver = TestObserver<Error>()
+        val result = mockDiscoverViewModel.storageError
+        result.subscribe(testObserver)
 
-            // Run the pending tasks in the dispatcher
-            testDispatcher.scheduler.advanceUntilIdle()
 
-            //then
-            val result = mockDiscoverViewModel.storageError.first()
-            assertThat(result).isEqualTo(StorageError.NO_DATA_TO_STORE)
+        mockDiscoverViewModel.requestData()
 
-        }
+        //then
+        val sut = testObserver.values().first()
+        assertThat(sut).isEqualTo(StorageError.NO_DATA_TO_STORE)
+    }
 }
