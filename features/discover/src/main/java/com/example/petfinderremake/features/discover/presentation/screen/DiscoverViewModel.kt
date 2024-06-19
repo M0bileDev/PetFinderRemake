@@ -19,6 +19,7 @@ import com.example.petfinderremake.common.presentation.screen.gallery.GallerySen
 import com.example.petfinderremake.features.discover.domain.usecase.get.GetDiscoverPaginatedAnimalsUseCase
 import com.example.petfinderremake.features.discover.domain.usecase.request.RequestDiscoverPageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
@@ -52,7 +53,10 @@ class DiscoverViewModel @Inject constructor(
     private val animalTypesSubject = BehaviorSubject.createDefault<List<AnimalType>>(emptyList())
 
     private val discoverEventSubject = PublishSubject.create<DiscoverEvent>()
-    val discoverEvent = discoverEventSubject.hide()
+    val discoverEvent = discoverEventSubject
+        .hide()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     private val networkErrorSubject = PublishSubject.create<NetworkError>()
     val networkError = networkErrorSubject.hide().map { it as Error }
@@ -88,7 +92,7 @@ class DiscoverViewModel @Inject constructor(
             adapterModels = adapterModels,
             animalTypes = types,
         )
-    }
+    }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 
     fun navigateToSearch(typeName: String = "") {
         discoverEventSubject.onNext(DiscoverEvent.NavigateToSearch(typeName))
@@ -117,7 +121,6 @@ class DiscoverViewModel @Inject constructor(
 
     private fun observeDiscoverPage() {
         getDiscoverPaginatedAnimalsUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -130,7 +133,6 @@ class DiscoverViewModel @Inject constructor(
 
     private fun observeAnimalTypes() {
         getAnimalTypesUseCase()
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 with(result) {
                     onSuccess {
@@ -151,7 +153,6 @@ class DiscoverViewModel @Inject constructor(
             onLoading = { loading ->
                 discoverPageLoadingSubject.onNext(loading)
             })
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result
                     .onNetworkError(onNetworkError = { networkError ->
@@ -168,14 +169,13 @@ class DiscoverViewModel @Inject constructor(
             onLoading = { loading ->
                 animalTypesLoadingSubject.onNext(loading)
             })
-            .subscribeOn(Schedulers.io())
             .subscribe { result ->
                 result
-                    .onNetworkError(onNetworkError = {
-                        networkErrorSubject.onNext(it)
+                    .onNetworkError(onNetworkError = { networkError ->
+                        networkErrorSubject.onNext(networkError)
                     })
-                    .onStorageError(onStorageError = {
-                        storageErrorSubject.onNext(it)
+                    .onStorageError(onStorageError = { storageError ->
+                        storageErrorSubject.onNext(storageError)
                     })
             }.addTo(subscriptions)
     }

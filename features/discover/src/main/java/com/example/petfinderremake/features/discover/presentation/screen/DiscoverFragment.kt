@@ -21,10 +21,8 @@ import com.example.petfinderremake.features.discover.R
 import com.example.petfinderremake.features.discover.databinding.FragmentDiscoverBinding
 import com.example.petfinderremake.features.discover.presentation.navigation.DiscoverNavigation
 import dagger.hilt.android.AndroidEntryPoint
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.addTo
-import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
@@ -134,12 +132,12 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         }
     }
 
-    private fun setupAnimalTypeRecyclerView() {
+    private fun setupAnimalTypeRecyclerView() = with(viewModel) {
         val linearLayoutManager =
             LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
         animalTypeGridAdapter = AnimalTypeGridAdapter(
             onClick = { name ->
-                viewModel.navigateToSearch(name)
+                navigateToSearch(name)
             }
         )
         binding.discoverBody.discoverBodyRecyclerView.apply {
@@ -149,15 +147,13 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         }
     }
 
-    private fun observeDiscoverEvent() {
+    private fun observeDiscoverEvent() = with(viewModel) {
         withLifecycleOwner(
             jobBlock = {
                 observeEventJob = it
             },
             disposableBlock = {
-                viewModel.discoverEvent
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
+                discoverEvent
                     .subscribe { event ->
                         when (event) {
                             is DiscoverViewModel.DiscoverEvent.NavigateToSearch -> {
@@ -172,15 +168,13 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         )
     }
 
-    private fun observeUiState() {
+    private fun observeUiState() = with(viewModel) {
         withLifecycleOwner(
             jobBlock = {
                 observeUiStateJob = it
             },
             disposableBlock = {
-                viewModel.discoverUiState
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
+                discoverUiState
                     .subscribe { uiState ->
                         updateSwipeRefresh(uiState)
                         updateTopDiscover(uiState)
@@ -231,6 +225,7 @@ class DiscoverFragment : Fragment(), GalleryReceiver, AnimalDetailsReceiver {
         observeEventJob?.cancel()
         observeUiStateJob?.cancel()
         observeGalleryReceiverJob?.cancel()
+        observeAnimalDetailsReceiverJob?.cancel()
         networkErrorJob?.cancel()
         storageErrorJob?.cancel()
         subscriptions.clear()
