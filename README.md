@@ -16,7 +16,7 @@ Last but not least in this very short description, some modules contains test (u
 7. firebase integration (fcm)
    
 <br></br>Variants:
-1. Android View + Kotlin -> ([master](https://github.com/M0bileDev/PetFinderRemake/tree/master)).
+1. Android View + Kotlin -> ([develop](https://github.com/M0bileDev/PetFinderRemake/tree/develop)).
 2. Android View + Kotlin + RxJava -> ([migration_rxjava](https://github.com/M0bileDev/PetFinderRemake/tree/feature/migration_rxjava)).
 3. Compose + Kotlin (soon)
 4. Compose + RxJava (soon)
