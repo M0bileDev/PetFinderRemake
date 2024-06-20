@@ -11,7 +11,6 @@ import com.example.petfinderremake.common.domain.result.onError
 import com.example.petfinderremake.features.discover.AnimalRepositoryTest
 import com.example.petfinderremake.features.discover.TestUtils
 import com.google.common.truth.Truth
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit4.MockKRule
@@ -347,7 +346,7 @@ class RequestDiscoverPageUseCaseTest : AnimalRepositoryTest() {
         mockRequestDiscoverPageUseCase(mockOnLoading).subscribe(testObserver)
 
         //then
-        coVerifyOrder {
+        verifyOrder {
             mockAnimalRepository.storeDiscoverPaginatedAnimals(notInitDiscoverPage)
             mockOnLoading(false)
         }
